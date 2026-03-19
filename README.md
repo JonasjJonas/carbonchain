@@ -18,7 +18,7 @@ o cálculo e verificar que o hash bate. Nenhum projeto de carbono faz isso hoje.
 
 ## Prova de execução
 
-![Cálculo gravado on-chain](docs/calculo_gravado_onchain.png)
+![Cálculo gravado on-chain](docs/calculo_gravado_onchain.png?raw=true)
 
 Hash de exemplo:
 `361e58690c58236e8fe6d1fad12c77441639d251e96c16c2783432ac373ba5e3`
