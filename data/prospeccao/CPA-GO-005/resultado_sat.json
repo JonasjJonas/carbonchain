@@ -1,0 +1,863 @@
+{
+  "metadata": {
+    "cpa_id": "CPA-GO-005",
+    "fazenda": "Fazenda #5 — Itumbiara, GO",
+    "municipio": "Itumbiara",
+    "area_ha": 343.9468,
+    "data_imagem": "2026-03-25",
+    "resolucao_m": 10,
+    "metodologia": "VM0042 v2.2",
+    "sensor": "Sentinel-2 MSI",
+    "gerado_em": "2026-03-25T15:50:41.087632"
+  },
+  "indices": {
+    "ndvi_medio": 0.454,
+    "ndvi_std": 0.2343,
+    "ndvi_p25": 0.1783,
+    "ndvi_p75": 0.6854,
+    "ndwi_medio": 0.2355,
+    "bsi_medio": -0.2355,
+    "soc_proxy": 0.5495,
+    "classificacao": "Vegetação densa — lavoura saudável"
+  },
+  "zonas_ha": {
+    "floresta_reserva_ha": 114.2,
+    "lavoura_saudavel_ha": 107.3,
+    "vegetacao_moderada_ha": 20.3,
+    "solo_exposto_ha": 100.4,
+    "agua_sombra_ha": 0.0
+  },
+  "elegibilidade": {
+    "solo_agricola_ha": 228.0,
+    "reserva_ha": 114.2,
+    "additionality_ok": true
+  },
+  "amostragem": {
+    "n_pontos": 117,
+    "pontos_ha": 0.34,
+    "pontos": [
+      {
+        "row": 130,
+        "col": 10,
+        "ndvi": 0.1679,
+        "soc_proxy": 0.1535,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 30,
+        "ndvi": 0.1269,
+        "soc_proxy": 0.1134,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 50,
+        "ndvi": 0.1064,
+        "soc_proxy": 0.127,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 70,
+        "ndvi": 0.13,
+        "soc_proxy": 0.1458,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 90,
+        "ndvi": 0.1578,
+        "soc_proxy": 0.1857,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 110,
+        "ndvi": 0.1885,
+        "soc_proxy": 0.2317,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 130,
+        "ndvi": 0.14,
+        "soc_proxy": 0.1803,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 150,
+        "ndvi": 0.2287,
+        "soc_proxy": 0.189,
+        "prioridade": "media"
+      },
+      {
+        "row": 130,
+        "col": 170,
+        "ndvi": 0.1721,
+        "soc_proxy": 0.1479,
+        "prioridade": "media"
+      },
+      {
+        "row": 10,
+        "col": 10,
+        "ndvi": 0.7079,
+        "soc_proxy": 0.8841,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 30,
+        "ndvi": 0.6614,
+        "soc_proxy": 0.8545,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 50,
+        "ndvi": 0.7048,
+        "soc_proxy": 0.881,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 70,
+        "ndvi": 0.7374,
+        "soc_proxy": 0.8907,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 90,
+        "ndvi": 0.7283,
+        "soc_proxy": 0.9042,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 110,
+        "ndvi": 0.7196,
+        "soc_proxy": 0.8859,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 130,
+        "ndvi": 0.6777,
+        "soc_proxy": 0.8656,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 150,
+        "ndvi": 0.7449,
+        "soc_proxy": 0.9007,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 10,
+        "col": 170,
+        "ndvi": 0.7686,
+        "soc_proxy": 0.9205,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 10,
+        "ndvi": 0.6906,
+        "soc_proxy": 0.8922,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 30,
+        "ndvi": 0.772,
+        "soc_proxy": 0.8813,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 50,
+        "ndvi": 0.7199,
+        "soc_proxy": 0.8956,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 70,
+        "ndvi": 0.7182,
+        "soc_proxy": 0.8912,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 90,
+        "ndvi": 0.783,
+        "soc_proxy": 0.9398,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 110,
+        "ndvi": 0.6657,
+        "soc_proxy": 0.8521,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 130,
+        "ndvi": 0.6685,
+        "soc_proxy": 0.8535,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 150,
+        "ndvi": 0.7566,
+        "soc_proxy": 0.922,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 30,
+        "col": 170,
+        "ndvi": 0.7134,
+        "soc_proxy": 0.8962,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 10,
+        "ndvi": 0.6749,
+        "soc_proxy": 0.8557,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 30,
+        "ndvi": 0.731,
+        "soc_proxy": 0.8827,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 50,
+        "ndvi": 0.7495,
+        "soc_proxy": 0.9028,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 70,
+        "ndvi": 0.7721,
+        "soc_proxy": 0.9071,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 90,
+        "ndvi": 0.718,
+        "soc_proxy": 0.9092,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 110,
+        "ndvi": 0.7091,
+        "soc_proxy": 0.8843,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 130,
+        "ndvi": 0.6919,
+        "soc_proxy": 0.8598,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 150,
+        "ndvi": 0.75,
+        "soc_proxy": 0.8967,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 50,
+        "col": 170,
+        "ndvi": 0.7311,
+        "soc_proxy": 0.9117,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 10,
+        "ndvi": 0.5697,
+        "soc_proxy": 0.6442,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 30,
+        "ndvi": 0.4765,
+        "soc_proxy": 0.6069,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 50,
+        "ndvi": 0.4983,
+        "soc_proxy": 0.6229,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 70,
+        "ndvi": 0.4356,
+        "soc_proxy": 0.5802,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 90,
+        "ndvi": 0.5072,
+        "soc_proxy": 0.6405,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 110,
+        "ndvi": 0.5429,
+        "soc_proxy": 0.6217,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 130,
+        "ndvi": 0.4612,
+        "soc_proxy": 0.5839,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 150,
+        "ndvi": 0.5271,
+        "soc_proxy": 0.6303,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 70,
+        "col": 170,
+        "ndvi": 0.5169,
+        "soc_proxy": 0.6504,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 10,
+        "ndvi": 0.517,
+        "soc_proxy": 0.6528,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 30,
+        "ndvi": 0.467,
+        "soc_proxy": 0.5692,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 50,
+        "ndvi": 0.4743,
+        "soc_proxy": 0.6204,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 70,
+        "ndvi": 0.5419,
+        "soc_proxy": 0.6457,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 90,
+        "ndvi": 0.5382,
+        "soc_proxy": 0.6601,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 110,
+        "ndvi": 0.4748,
+        "soc_proxy": 0.6159,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 130,
+        "ndvi": 0.5243,
+        "soc_proxy": 0.652,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 150,
+        "ndvi": 0.507,
+        "soc_proxy": 0.6111,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 90,
+        "col": 170,
+        "ndvi": 0.4994,
+        "soc_proxy": 0.6417,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 10,
+        "ndvi": 0.4996,
+        "soc_proxy": 0.6182,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 30,
+        "ndvi": 0.5017,
+        "soc_proxy": 0.6221,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 50,
+        "ndvi": 0.4942,
+        "soc_proxy": 0.5717,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 70,
+        "ndvi": 0.5773,
+        "soc_proxy": 0.6877,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 90,
+        "ndvi": 0.5007,
+        "soc_proxy": 0.6074,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 110,
+        "ndvi": 0.4756,
+        "soc_proxy": 0.5719,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 130,
+        "ndvi": 0.5883,
+        "soc_proxy": 0.6652,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 150,
+        "ndvi": 0.5411,
+        "soc_proxy": 0.6476,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 110,
+        "col": 170,
+        "ndvi": 0.4274,
+        "soc_proxy": 0.5908,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 10,
+        "ndvi": 0.1845,
+        "soc_proxy": 0.2025,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 30,
+        "ndvi": 0.1312,
+        "soc_proxy": 0.1582,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 50,
+        "ndvi": 0.1205,
+        "soc_proxy": 0.1633,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 70,
+        "ndvi": 0.1642,
+        "soc_proxy": 0.1519,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 90,
+        "ndvi": 0.1247,
+        "soc_proxy": 0.1377,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 110,
+        "ndvi": 0.1718,
+        "soc_proxy": 0.1832,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 130,
+        "ndvi": 0.1634,
+        "soc_proxy": 0.1603,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 150,
+        "ndvi": 0.1207,
+        "soc_proxy": 0.1712,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 150,
+        "col": 170,
+        "ndvi": 0.1526,
+        "soc_proxy": 0.1743,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 10,
+        "ndvi": 0.1615,
+        "soc_proxy": 0.1804,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 30,
+        "ndvi": 0.1376,
+        "soc_proxy": 0.1617,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 50,
+        "ndvi": 0.1445,
+        "soc_proxy": 0.1597,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 70,
+        "ndvi": 0.1325,
+        "soc_proxy": 0.1313,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 90,
+        "ndvi": 0.1141,
+        "soc_proxy": 0.1441,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 110,
+        "ndvi": 0.1167,
+        "soc_proxy": 0.1155,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 130,
+        "ndvi": 0.1435,
+        "soc_proxy": 0.1372,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 150,
+        "ndvi": 0.1066,
+        "soc_proxy": 0.1424,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 170,
+        "col": 170,
+        "ndvi": 0.1735,
+        "soc_proxy": 0.1599,
+        "prioridade": "baixa"
+      },
+      {
+        "row": 15,
+        "col": 15,
+        "ndvi": 0.7657,
+        "soc_proxy": 0.9084,
+        "prioridade": "grade"
+      },
+      {
+        "row": 15,
+        "col": 45,
+        "ndvi": 0.7108,
+        "soc_proxy": 0.9037,
+        "prioridade": "grade"
+      },
+      {
+        "row": 15,
+        "col": 75,
+        "ndvi": 0.6813,
+        "soc_proxy": 0.8602,
+        "prioridade": "grade"
+      },
+      {
+        "row": 15,
+        "col": 105,
+        "ndvi": 0.7438,
+        "soc_proxy": 0.9057,
+        "prioridade": "grade"
+      },
+      {
+        "row": 15,
+        "col": 135,
+        "ndvi": 0.6997,
+        "soc_proxy": 0.8879,
+        "prioridade": "grade"
+      },
+      {
+        "row": 15,
+        "col": 165,
+        "ndvi": 0.682,
+        "soc_proxy": 0.8478,
+        "prioridade": "grade"
+      },
+      {
+        "row": 45,
+        "col": 15,
+        "ndvi": 0.6538,
+        "soc_proxy": 0.8358,
+        "prioridade": "grade"
+      },
+      {
+        "row": 45,
+        "col": 45,
+        "ndvi": 0.7484,
+        "soc_proxy": 0.8919,
+        "prioridade": "grade"
+      },
+      {
+        "row": 45,
+        "col": 75,
+        "ndvi": 0.7055,
+        "soc_proxy": 0.8951,
+        "prioridade": "grade"
+      },
+      {
+        "row": 45,
+        "col": 105,
+        "ndvi": 0.6919,
+        "soc_proxy": 0.8685,
+        "prioridade": "grade"
+      },
+      {
+        "row": 45,
+        "col": 135,
+        "ndvi": 0.6913,
+        "soc_proxy": 0.8572,
+        "prioridade": "grade"
+      },
+      {
+        "row": 45,
+        "col": 165,
+        "ndvi": 0.6888,
+        "soc_proxy": 0.8821,
+        "prioridade": "grade"
+      },
+      {
+        "row": 75,
+        "col": 15,
+        "ndvi": 0.5265,
+        "soc_proxy": 0.6019,
+        "prioridade": "grade"
+      },
+      {
+        "row": 75,
+        "col": 45,
+        "ndvi": 0.5427,
+        "soc_proxy": 0.6402,
+        "prioridade": "grade"
+      },
+      {
+        "row": 75,
+        "col": 75,
+        "ndvi": 0.5027,
+        "soc_proxy": 0.6069,
+        "prioridade": "grade"
+      },
+      {
+        "row": 75,
+        "col": 105,
+        "ndvi": 0.435,
+        "soc_proxy": 0.5663,
+        "prioridade": "grade"
+      },
+      {
+        "row": 75,
+        "col": 135,
+        "ndvi": 0.5164,
+        "soc_proxy": 0.6223,
+        "prioridade": "grade"
+      },
+      {
+        "row": 75,
+        "col": 165,
+        "ndvi": 0.4967,
+        "soc_proxy": 0.6147,
+        "prioridade": "grade"
+      },
+      {
+        "row": 105,
+        "col": 15,
+        "ndvi": 0.5073,
+        "soc_proxy": 0.6092,
+        "prioridade": "grade"
+      },
+      {
+        "row": 105,
+        "col": 45,
+        "ndvi": 0.4905,
+        "soc_proxy": 0.6101,
+        "prioridade": "grade"
+      },
+      {
+        "row": 105,
+        "col": 75,
+        "ndvi": 0.4973,
+        "soc_proxy": 0.6224,
+        "prioridade": "grade"
+      },
+      {
+        "row": 105,
+        "col": 105,
+        "ndvi": 0.4785,
+        "soc_proxy": 0.5768,
+        "prioridade": "grade"
+      },
+      {
+        "row": 105,
+        "col": 135,
+        "ndvi": 0.4746,
+        "soc_proxy": 0.5798,
+        "prioridade": "grade"
+      },
+      {
+        "row": 105,
+        "col": 165,
+        "ndvi": 0.5937,
+        "soc_proxy": 0.6596,
+        "prioridade": "grade"
+      },
+      {
+        "row": 135,
+        "col": 15,
+        "ndvi": 0.1497,
+        "soc_proxy": 0.1822,
+        "prioridade": "grade"
+      },
+      {
+        "row": 135,
+        "col": 45,
+        "ndvi": 0.1459,
+        "soc_proxy": 0.1513,
+        "prioridade": "grade"
+      },
+      {
+        "row": 135,
+        "col": 75,
+        "ndvi": 0.0957,
+        "soc_proxy": 0.1302,
+        "prioridade": "grade"
+      },
+      {
+        "row": 135,
+        "col": 105,
+        "ndvi": 0.1286,
+        "soc_proxy": 0.1386,
+        "prioridade": "grade"
+      },
+      {
+        "row": 135,
+        "col": 135,
+        "ndvi": 0.1758,
+        "soc_proxy": 0.1926,
+        "prioridade": "grade"
+      },
+      {
+        "row": 135,
+        "col": 165,
+        "ndvi": 0.1213,
+        "soc_proxy": 0.1338,
+        "prioridade": "grade"
+      },
+      {
+        "row": 165,
+        "col": 15,
+        "ndvi": 0.0587,
+        "soc_proxy": 0.0548,
+        "prioridade": "grade"
+      },
+      {
+        "row": 165,
+        "col": 45,
+        "ndvi": 0.1554,
+        "soc_proxy": 0.1751,
+        "prioridade": "grade"
+      },
+      {
+        "row": 165,
+        "col": 75,
+        "ndvi": 0.1455,
+        "soc_proxy": 0.137,
+        "prioridade": "grade"
+      },
+      {
+        "row": 165,
+        "col": 105,
+        "ndvi": 0.1805,
+        "soc_proxy": 0.2025,
+        "prioridade": "grade"
+      },
+      {
+        "row": 165,
+        "col": 135,
+        "ndvi": 0.1092,
+        "soc_proxy": 0.1067,
+        "prioridade": "grade"
+      },
+      {
+        "row": 165,
+        "col": 165,
+        "ndvi": 0.187,
+        "soc_proxy": 0.1603,
+        "prioridade": "grade"
+      }
+    ]
+  },
+  "outputs": {
+    "mapa_ndvi": "data/sample_farm/mapa_ndvi_CPA-GO-005.png"
+  }
+}
