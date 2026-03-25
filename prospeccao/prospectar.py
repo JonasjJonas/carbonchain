@@ -86,6 +86,40 @@ def criar_sessao():
     session.mount("http://", adapter)
     return session
 
+
+def get_com_curl(url: str, params=None) -> dict:
+    """
+    Fallback para quando requests falha por SSL (comum no Mac com Python 3.14).
+    Usa curl via subprocess, que lida melhor com servidores TLS legados.
+    """
+    import subprocess, json as _json, shutil
+    from urllib.parse import urlencode
+
+    if not shutil.which("curl"):
+        raise RuntimeError("curl não encontrado.")
+
+    url_final = f"{url}?{urlencode(params, doseq=True)}" if params else url
+    result = subprocess.run(
+        ["curl", "-s", "-k", "--max-time", "120", url_final],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"curl falhou: {result.stderr}")
+    return _json.loads(result.stdout)
+
+
+def get_json(url: str, params=None) -> dict:
+    """Tenta requests; se falhar por SSL usa curl como fallback automático."""
+    try:
+        r = SESSION.get(url, params=params, verify=False, timeout=120)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        if any(k in str(e) for k in ["SSL", "EOF", "handshake", "UNEXPECTED"]):
+            return get_com_curl(url, params)
+        raise
+
+
 SESSION = criar_sessao()
 
 
@@ -104,9 +138,7 @@ def resolver_municipio(nome: str, estado: str) -> tuple[str, str]:
 
     # Busca todos os municípios do estado na API IBGE
     url = f"https://servicodados.ibge.gov.br/api/v1/localidades/estados/{estado}/municipios"
-    r = SESSION.get(url, timeout=30)
-    r.raise_for_status()
-    municipios = r.json()
+    municipios = get_json(url)
 
     # Busca por correspondência exata (sem acento)
     import unicodedata
@@ -168,10 +200,7 @@ def buscar_imoveis_sicar(cod_ibge: str, estado: str) -> pd.DataFrame:
         "count":        "10000",
     }
 
-    r = SESSION.get(WFS_URL, params=params, verify=False, timeout=120)
-    r.raise_for_status()
-
-    data = r.json()
+    data = get_json(WFS_URL, params=params)
     features = data.get("features", [])
     total = data.get("numberMatched", len(features))
 
@@ -208,9 +237,7 @@ def consultar_mapbiomas(cod_imovel: str) -> dict:
         params.append(("pixelValue", v))
 
     try:
-        r = SESSION.get(MB_URL, params=params, verify=False, timeout=60)
-        r.raise_for_status()
-        data = r.json()
+        data = get_json(MB_URL, params=params)
 
         total_agro, anos = 0, 0
         for stat in data.get("statistic", []):
