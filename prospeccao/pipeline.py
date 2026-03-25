@@ -241,29 +241,28 @@ def rodar_pipeline(
         print(f"   Área: {geo['area_ha']:.0f} ha")
 
         try:
+            # Redireciona DATA_DIR do satellite.py para a pasta desta fazenda
+            import mrv.satellite as sat_module
+            farm_dir = output_dir / fazenda_info["cpa_id"]
+            farm_dir.mkdir(parents=True, exist_ok=True)
+            sat_module.DATA_DIR = farm_dir
+
             if usar_api:
-                # Dados reais Copernicus — requer credenciais no .env
                 b4, b8, b11, b12, cloud, _, data_img = buscar_sentinel2_api(
-                    fazenda_key=None,
-                    data_inicio=None,
-                    data_fim=None,
-                    fazenda_override=fazenda_info,   # passa bbox dinamicamente
+                    fazenda_key=None, data_inicio=None, data_fim=None,
+                    fazenda_override=fazenda_info,
                 )
                 resultado = analisar_fazenda(
                     b4, b8, b11, b12, fazenda_info,
                     cloud_mask=cloud, data_imagem=data_img
                 )
             else:
-                # Modo local (dados sintéticos com bbox real)
                 b4, b8, b11, b12, _ = rodar_teste_local_com_info(fazenda_info)
                 resultado = analisar_fazenda(b4, b8, b11, b12, fazenda_info)
 
-            # Salva resultado por fazenda
-            farm_dir = output_dir / fazenda_info["cpa_id"]
-            farm_dir.mkdir(parents=True, exist_ok=True)
-            json_path = farm_dir / "resultado_sat.json"
-            with open(json_path, "w", encoding="utf-8") as f:
-                json.dump(resultado, f, ensure_ascii=False, indent=2)
+            # O satellite.py já salva o JSON com nome resultado_sat_{cpa_id}.json
+            # Apenas referencia o path correto para o resumo
+            json_path = farm_dir / f"resultado_sat_{fazenda_info['cpa_id']}.json"
 
             resultados_mrv.append({
                 "rank":       rank,
@@ -279,6 +278,17 @@ def rodar_pipeline(
                 "n_pontos_nir": resultado["amostragem"]["n_pontos"],
                 "json_path":  str(json_path),
             })
+
+            # Mover arquivos de data/sample_farm/ para a pasta correta da fazenda
+            # satellite.py salva internamente em DATA_DIR antes de retornar
+            import shutil
+            sample_dir = ROOT / "data" / "sample_farm"
+            cpa_id_str = fazenda_info["cpa_id"]
+            for ext in [".png", ".json"]:
+                padrao = f"*{cpa_id_str}*{ext}"
+                for arq in sample_dir.glob(padrao):
+                    destino = farm_dir / arq.name
+                    shutil.move(str(arq), str(destino))
 
             print(f"   ✅ NDVI: {resultado['indices']['ndvi_medio']:.3f} | SOC proxy: {resultado['indices']['soc_proxy']:.3f}\n")
             time.sleep(0.5)  # pausa entre fazendas
