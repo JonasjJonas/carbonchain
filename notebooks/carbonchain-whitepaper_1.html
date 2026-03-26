@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CarbonChain — Whitepaper Técnico v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #09150C;
+  --surface:  #0F1F13;
+  --border:   #1E3424;
+  --muted:    #2A4830;
+  --text:     #DDD8CC;
+  --subtext:  #8A9E8E;
+  --accent:   #38D070;
+  --gold:     #E6A020;
+  --red:      #D05540;
+  --blue:     #4A90C8;
+  --sidebar-w: 240px;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans:  'IBM Plex Sans', system-ui, sans-serif;
+  --mono:  'IBM Plex Mono', 'Courier New', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.75;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Progress bar ── */
+#progress-bar {
+  position: fixed; top: 0; left: 0; width: 0%;
+  height: 2px; background: var(--accent);
+  z-index: 100; transition: width 0.1s;
+}
+
+/* ── Sidebar ── */
+aside {
+  position: fixed; top: 0; left: 0;
+  width: var(--sidebar-w); height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 0 0 2rem;
+  display: flex; flex-direction: column;
+  z-index: 50;
+}
+
+.sidebar-header {
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-logo {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 0.25rem;
+}
+.sidebar-logo::before {
+  content: '';
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.sidebar-meta {
+  font-size: 11px;
+  color: var(--subtext);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+nav { padding: 1rem 0; flex: 1; }
+
+nav a {
+  display: block;
+  padding: 0.4rem 1.25rem 0.4rem 1.5rem;
+  color: var(--subtext);
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+nav a:hover { color: var(--text); border-left-color: var(--muted); }
+nav a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 500; }
+
+.nav-section-label {
+  padding: 1rem 1.25rem 0.25rem;
+  font-size: 10px;
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.sidebar-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--subtext);
+  font-family: var(--mono);
+}
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(56,208,112,0.08);
+  border: 1px solid rgba(56,208,112,0.25);
+  color: var(--accent);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+.status-badge::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Main content ── */
+main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  max-width: 860px;
+  padding: 4rem 4rem 8rem;
+}
+
+/* ── Sections ── */
+section { margin-bottom: 5rem; scroll-margin-top: 3rem; }
+
+/* ── Typography ── */
+.wp-title {
+  font-family: var(--serif);
+  font-size: 3.2rem;
+  font-weight: 300;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #F0EAD8;
+  margin-bottom: 0.5rem;
+}
+.wp-subtitle {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--subtext);
+  margin-bottom: 2rem;
+}
+.wp-meta {
+  display: flex; gap: 2rem; flex-wrap: wrap;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3rem;
+}
+.wp-meta-item { font-family: var(--mono); font-size: 11.5px; }
+.wp-meta-item span { color: var(--subtext); display: block; margin-bottom: 2px; }
+.wp-meta-item strong { color: var(--text); font-weight: 500; }
+
+h2 {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 400;
+  color: #F0EAD8;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+h2 .section-num {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+h3 {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: #E8E2D5;
+  margin: 2rem 0 0.75rem;
+}
+
+h4 {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 1.5rem 0 0.5rem;
+}
+
+p { margin-bottom: 1rem; color: var(--text); }
+
+/* ── Callout boxes ── */
+.callout {
+  border-left: 3px solid var(--accent);
+  background: rgba(56,208,112,0.04);
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  border-radius: 0 6px 6px 0;
+}
+.callout.gold { border-color: var(--gold); background: rgba(230,160,32,0.04); }
+.callout.red  { border-color: var(--red);  background: rgba(208,85,64,0.04); }
+.callout.blue { border-color: var(--blue); background: rgba(74,144,200,0.04); }
+.callout p:last-child { margin: 0; }
+.callout-title {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+.callout.gold .callout-title { color: var(--gold); }
+.callout.red  .callout-title { color: var(--red); }
+.callout.blue .callout-title { color: var(--blue); }
+
+/* ── Token cards ── */
+.token-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+.token-card {
+  background: var(--surface);
+  padding: 1.25rem;
+  transition: background 0.15s;
+}
+.token-card:hover { background: #142019; }
+.token-symbol {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+.token-name {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  color: #F0EAD8;
+  margin-bottom: 0.4rem;
+}
+.token-desc {
+  font-size: 12.5px;
+  color: var(--subtext);
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+.token-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+.tag-green { background: rgba(56,208,112,0.1); color: var(--accent); border: 1px solid rgba(56,208,112,0.2); }
+.tag-gold  { background: rgba(230,160,32,0.1);  color: var(--gold);   border: 1px solid rgba(230,160,32,0.2); }
+.tag-blue  { background: rgba(74,144,200,0.1);  color: var(--blue);   border: 1px solid rgba(74,144,200,0.2); }
+.tag-red   { background: rgba(208,85,64,0.1);   color: var(--red);    border: 1px solid rgba(208,85,64,0.2); }
+.tag-gray  { background: rgba(138,158,142,0.1); color: var(--subtext); border: 1px solid rgba(138,158,142,0.2); }
+
+/* ── Tables ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 1.5rem 0;
+  font-family: var(--mono);
+}
+thead th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--subtext);
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+tbody td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(30,52,36,0.5);
+  color: var(--text);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(56,208,112,0.03); }
+td.accent { color: var(--accent); }
+td.gold { color: var(--gold); }
+td.subtext { color: var(--subtext); font-size: 12px; }
+
+/* ── Architecture layers ── */
+.arch-stack { margin: 1.5rem 0; }
+.arch-layer {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  margin-bottom: -1px;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 1rem;
+  align-items: start;
+  transition: background 0.15s;
+}
+.arch-layer:first-child { border-radius: 8px 8px 0 0; }
+.arch-layer:last-child  { border-radius: 0 0 8px 8px; margin-bottom: 0; }
+.arch-layer:hover { background: var(--surface); }
+.arch-layer-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.arch-layer-num {
+  font-size: 1.5rem;
+  font-family: var(--serif);
+  color: var(--border);
+  line-height: 1;
+}
+.arch-layer-content { font-size: 13px; color: var(--text); line-height: 1.65; }
+.arch-layer-content strong { color: #E8E2D5; font-weight: 500; }
+.arch-layer-components {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+
+/* ── Roadmap ── */
+.roadmap { position: relative; padding-left: 2rem; }
+.roadmap::before {
+  content: '';
+  position: absolute; left: 5px; top: 8px; bottom: 8px;
+  width: 1px; background: var(--border);
+}
+.roadmap-item { position: relative; margin-bottom: 2rem; }
+.roadmap-dot {
+  position: absolute; left: -2rem; top: 5px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+}
+.roadmap-item.done .roadmap-dot { background: var(--accent); border-color: var(--accent); }
+.roadmap-item.current .roadmap-dot { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.roadmap-phase {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--subtext);
+  margin-bottom: 0.2rem;
+}
+.roadmap-title {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  color: #E8E2D5;
+  margin-bottom: 0.35rem;
+}
+.roadmap-desc { font-size: 13px; color: var(--subtext); line-height: 1.6; }
+
+/* ── Formula blocks ── */
+.formula {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.formula-comment {
+  color: var(--subtext);
+  font-size: 11px;
+  margin-top: 0.4rem;
+  white-space: normal;
+  font-family: var(--sans);
+}
+
+/* ── Metrics grid ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+.metric-card {
+  background: var(--surface);
+  padding: 1.2rem;
+  text-align: center;
+}
+.metric-value {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1.1;
+  color: #F0EAD8;
+  margin-bottom: 0.2rem;
+}
+.metric-value .unit { font-size: 1rem; color: var(--subtext); font-weight: 300; }
+.metric-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--subtext);
+  text-transform: uppercase;
+}
+.metric-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── Phase comparison ── */
+.phase-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.phase-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: var(--surface);
+}
+.phase-card.active { border-color: rgba(56,208,112,0.4); }
+.phase-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.phase-card.active .phase-badge { color: var(--accent); }
+.phase-card:not(.active) .phase-badge { color: var(--subtext); }
+.phase-title {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  color: #E8E2D5;
+  margin-bottom: 0.75rem;
+}
+.phase-list {
+  list-style: none;
+  font-size: 13px;
+  color: var(--subtext);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.phase-list li::before {
+  content: '→ ';
+  color: var(--border);
+  font-family: var(--mono);
+}
+.phase-card.active .phase-list li::before { color: var(--accent); }
+
+/* ── Code blocks ── */
+pre {
+  background: #06100A;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  line-height: 1.7;
+}
+.kw { color: var(--accent); }
+.cm { color: var(--subtext); font-style: italic; }
+.str { color: var(--gold); }
+.num { color: var(--blue); }
+
+/* ── Divider ── */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 3rem 0;
+}
+
+/* ── Print button ── */
+.wp-actions {
+  display: flex; gap: 8px; margin-bottom: 2rem; flex-wrap: wrap;
+}
+.btn {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--subtext);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: rgba(56,208,112,0.08); border-color: rgba(56,208,112,0.4); color: var(--accent); }
+.btn.primary:hover { background: rgba(56,208,112,0.15); }
+
+ul.bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+ul.bullet-list li {
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  font-size: 14px;
+  color: var(--text);
+  position: relative;
+}
+ul.bullet-list li::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-size: 1.2rem;
+  line-height: 1;
+  top: 0.3rem;
+}
+
+@media print {
+  aside, #progress-bar { display: none; }
+  main { margin-left: 0; padding: 2rem; max-width: 100%; }
+  body { color: #000; background: #fff; }
+  h2, h3, h4 { color: #000; }
+  .callout, .token-card, .arch-layer, .metric-card, .phase-card { background: #f8f8f8; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- SIDEBAR -->
+<aside>
+  <div class="sidebar-header">
+    <div class="sidebar-logo">CarbonChain</div>
+    <div class="sidebar-meta">Whitepaper Técnico v1.0</div>
+    <div class="sidebar-meta" style="margin-top:4px">Março 2026</div>
+    <div class="status-badge">DRAFT</div>
+  </div>
+  <nav id="nav">
+    <div class="nav-section-label">Introdução</div>
+    <a href="#exec-summary">Sumário Executivo</a>
+    <a href="#problema">O Problema</a>
+    <a href="#solucao">A Solução CarbonChain</a>
+
+    <div class="nav-section-label">Tecnologia</div>
+    <a href="#arquitetura">Arquitetura do Sistema</a>
+    <a href="#mrv-stack">Stack de MRV</a>
+    <a href="#cartesi">Cartesi Rollup</a>
+
+    <div class="nav-section-label">Token</div>
+    <a href="#tokenomics">Tokenomics</a>
+    <a href="#metodologia">Metodologias</a>
+
+    <div class="nav-section-label">Mercado & Legal</div>
+    <a href="#compliance">Compliance Regulatório</a>
+    <a href="#business-model">Modelo de Negócio</a>
+    <a href="#mercado">Mercado-Alvo</a>
+
+    <div class="nav-section-label">Execução</div>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#riscos">Riscos & Mitigações</a>
+    <a href="#referencias">Referências</a>
+  </nav>
+  <div class="sidebar-footer">
+    github.com/JonasjJonas/carbonchain<br>
+    <span style="color:var(--muted)">Confidencial — Draft Interno</span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- COVER -->
+  <section id="cover" style="padding-bottom:3rem;border-bottom:1px solid var(--border);margin-bottom:4rem">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.12em;color:var(--subtext);text-transform:uppercase;margin-bottom:1.5rem">
+      Whitepaper Técnico · Versão 1.0 · Março 2026
+    </div>
+    <h1 class="wp-title">CarbonChain</h1>
+    <p class="wp-subtitle">Infraestrutura de MRV e Tokenização de Créditos de Carbono para Produtores Rurais Brasileiros</p>
+
+    <div class="wp-actions">
+      <button class="btn primary" onclick="window.print()">↓ Exportar PDF</button>
+      <a class="btn" href="https://github.com/JonasjJonas/carbonchain" target="_blank">GitHub ↗</a>
+      <span class="btn" style="cursor:default;color:var(--muted)">Confidencial · Draft</span>
+    </div>
+
+    <div class="wp-meta">
+      <div class="wp-meta-item"><span>Projeto</span><strong>CarbonChain</strong></div>
+      <div class="wp-meta-item"><span>Versão</span><strong>1.0-draft</strong></div>
+      <div class="wp-meta-item"><span>Founder</span><strong>Jonas J. Jonas</strong></div>
+      <div class="wp-meta-item"><span>País</span><strong>Brasil</strong></div>
+      <div class="wp-meta-item"><span>Etapa atual</span><strong>Etapa 2 — Sentinel-2 API</strong></div>
+      <div class="wp-meta-item"><span>Standard primário</span><strong>VM0042 / Verra</strong></div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Abstract</div>
+      <p>A CarbonChain é uma infraestrutura tecnológica que conecta produtores rurais brasileiros ao mercado voluntário global de créditos de carbono. O sistema combina MRV (Monitoramento, Relato e Verificação) satelital via Sentinel-2, sensores NIR/MIR de solo e computação auditável on-chain via Cartesi Rollup para gerar créditos verificáveis, transparentes e rastreáveis. Quatro classes de tokens ERC-20 representam diferentes metodologias de sequestro e redução de emissões. O lançamento ocorre em duas fases para conformidade com as resoluções CVM aplicáveis.</p>
+    </div>
+  </section>
+
+  <!-- 1. EXEC SUMMARY -->
+  <section id="exec-summary">
+    <h2><span class="section-num">01</span>Sumário Executivo</h2>
+
+    <p>O mercado voluntário global de carbono movimentou aproximadamente <strong>USD 2 bilhões</strong> em 2023 e projeta crescimento para <strong>USD 50 bilhões até 2030</strong> (BloombergNEF). O Brasil detém o maior estoque de carbono florestal do planeta e produtores rurais possuem ativos imensos — porém inacessíveis pelo custo e complexidade de certificação.</p>
+
+    <p>A CarbonChain resolve esse gargalo construindo uma infraestrutura de ponta a ponta: do monitoramento de solo e vegetação até a emissão de créditos tokenizados negociáveis em mercados internacionais.</p>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value">5<span class="unit"> fazendas</span></div>
+        <div class="metric-label">Lucrativo desde</div>
+        <div class="metric-sub">Rodada 1 · US$10.5k/ano</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">~20<span class="unit"> fazendas</span></div>
+        <div class="metric-label">Operação sólida</div>
+        <div class="metric-sub">PoA registrado, custo diluído</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">4<span class="unit"> tokens</span></div>
+        <div class="metric-label">Classes CCT-*</div>
+        <div class="metric-sub">SOIL·REDD·BIO·ARR</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">20<span class="unit">%</span></div>
+        <div class="metric-label">Take rate</div>
+        <div class="metric-sub">Fase 1</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">685<span class="unit">%</span></div>
+        <div class="metric-label">ROI produtor</div>
+        <div class="metric-sub">Acumulado em 10 anos</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">US$65k</div>
+        <div class="metric-label">Setup Rodada 1</div>
+        <div class="metric-sub">5 produtores · infraestrutura coletiva</div>
+      </div>
+    </div>
+
+    <h3>Diferenciais Competitivos</h3>
+    <ul class="bullet-list">
+      <li><strong>MRV automatizado:</strong> Sentinel-2 + sensores NIR/MIR eliminam a dependência de auditoria física custosa</li>
+      <li><strong>Computação auditável on-chain:</strong> Cartesi Rollup executa os cálculos MRV (VM0042, VM0015, VM0047) num ambiente Linux verificável pela blockchain — cada metodologia rodando deterministicamente conforme o tipo de crédito</li>
+      <li><strong>Acesso democratizado:</strong> Produtores de pequeno a grande porte podem participar via PoA (Programme of Activities) sem custo inicial de certificação</li>
+      <li><strong>Múltiplas metodologias:</strong> 4 classes de tokens cobrem solo, floresta, biodiversidade e reflorestamento</li>
+      <li><strong>Compliance-first:</strong> Estrutura projetada desde o início para CVM e marco legal do carbono (Lei 15.797/2025)</li>
+    </ul>
+  </section>
+
+  <!-- 2. PROBLEMA -->
+  <section id="problema">
+    <h2><span class="section-num">02</span>O Problema</h2>
+
+    <h3>Barreiras de Acesso ao Mercado de Carbono</h3>
+    <p>Apesar do potencial gigantesco, produtores rurais brasileiros enfrentam barreiras estruturais que os impedem de monetizar seus ativos de carbono:</p>
+
+    <div class="callout red">
+      <div class="callout-title">Custo de Certificação</div>
+      <p>Uma certificação Verra (VCS) ou Gold Standard para uma fazenda individual custa entre <strong>USD 30.000 e USD 100.000</strong> em auditoria, mais R$ 15.000–30.000/ano em manutenção. Inviável para 95% dos produtores brasileiros.</p>
+    </div>
+
+    <div class="callout red">
+      <div class="callout-title">Complexidade Técnica</div>
+      <p>Metodologias como VM0042 exigem amostragem de solo, sensoriamento remoto e modelagem de linha de base que requerem expertise técnica especializada — indisponível para a maioria dos produtores.</p>
+    </div>
+
+    <div class="callout red">
+      <div class="callout-title">Falta de Transparência</div>
+      <p>O mercado voluntário atual é opaco: compradores não conseguem verificar de forma independente a adicionalidade e permanência dos créditos que adquirem, gerando ceticismo e descontos.</p>
+    </div>
+
+    <h3>Por Que Soluções Anteriores Falharam</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Projeto</th>
+          <th>Abordagem</th>
+          <th>Problema</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="accent">Moss.Earth</td>
+          <td>Tokenização de créditos existentes</td>
+          <td class="subtext">Não resolve MRV; depende de certificação terceira cara</td>
+        </tr>
+        <tr>
+          <td class="accent">Nori</td>
+          <td>Marketplace + MRV parcial</td>
+          <td class="subtext">Focado em EUA; não escala para BR; sem on-chain computation</td>
+        </tr>
+        <tr>
+          <td class="accent">Boomitra</td>
+          <td>AI + satélite para solo</td>
+          <td class="subtext">Sem blockchain; centralized; opaco para compradores</td>
+        </tr>
+        <tr>
+          <td class="accent">Indigo Ag</td>
+          <td>Agtech + carbono</td>
+          <td class="subtext">Modelo SaaS pesado; sem tokenização; burocracia americana</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>O denominador comum das falhas: <strong>nenhum projeto fechou o ciclo completo</strong> de MRV automatizado → cálculo auditável → tokenização → compliance regulatório num único stack integrado.</p>
+  </section>
+
+  <!-- 3. SOLUÇÃO -->
+  <section id="solucao">
+    <h2><span class="section-num">03</span>A Solução CarbonChain</h2>
+
+    <p>A CarbonChain fecha o ciclo completo em quatro camadas integradas, transformando o processo de certificação de carbono de um custo proibitivo em um serviço acessível baseado em dados.</p>
+
+    <div class="callout">
+      <div class="callout-title">Proposta de Valor</div>
+      <p>O produtor rural faz o cadastro e assina o contrato. A CarbonChain agenda uma visita técnica com sensor NIR compartilhado para coleta inicial de dados do solo. A partir daí, faz todo o resto: monitoramento satelital contínuo, cálculo de créditos, certificação via PoA e emissão de tokens negociáveis em mercados internacionais.</p>
+    </div>
+
+    <h3>O Que É MRV Como Serviço (MRVaaS)</h3>
+    <p>Em vez de cada produtor contratar sua própria auditoria, a CarbonChain opera um <strong>PoA (Programme of Activities)</strong> cobrindo múltiplas metodologias (VM0042, VM0015, VM0047), onde a CarbonChain é o <em>Coordinating and Managing Entity</em> (CME) e cada fazenda é uma <em>CPA (Component Project Activity)</em>.</p>
+    <p>Isso reduz o custo marginal de incluir um novo produtor de <strong>USD 30–100k</strong> (certificação individual) para aproximadamente <strong>USD 3–5k</strong> por CPA — o custo de registro da fazenda dentro do PoA existente. Uma redução de mais de 95%.</p>
+  </section>
+
+  <!-- 4. ARQUITETURA -->
+  <section id="arquitetura">
+    <h2><span class="section-num">04</span>Arquitetura do Sistema</h2>
+
+    <p>O stack tecnológico da CarbonChain é organizado em quatro camadas verticais, cada uma com responsabilidades bem definidas e interfaces documentadas.</p>
+
+    <div class="arch-stack">
+
+      <div class="arch-layer" style="border-radius:8px 8px 0 0">
+        <div class="arch-layer-label" style="color:var(--red)">
+          <span class="arch-layer-num" style="color:rgba(208,85,64,0.2)">1</span>
+          CAMADA<br>MRV
+        </div>
+        <div class="arch-layer-content">
+          <strong>Monitoramento de Campo e Satélite</strong><br>
+          Imagens multiespectrais Sentinel-2 (10m resolução, revisita a cada 5 dias) + sensores NIR/MIR de solo operados por técnicos itinerantes em visitas periódicas às fazendas participantes. Dados de NDVI, SOC, biomassa acima do solo (AGB) e precipitação compõem a entrada do modelo de cada metodologia.
+          <div class="arch-layer-components">
+            <span class="tag tag-red">Sentinel-2 API</span>
+            <span class="tag tag-red">NIR soil sensor</span>
+            <span class="tag tag-red">MIR / LIBS</span>
+            <span class="tag tag-gray">Landsat-8 backup</span>
+            <span class="tag tag-gray">INMET weather</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label" style="color:var(--gold)">
+          <span class="arch-layer-num" style="color:rgba(230,160,32,0.2)">2</span>
+          CAMADA<br>COMPUTE
+        </div>
+        <div class="arch-layer-content">
+          <strong>Pipeline de Processamento</strong><br>
+          Python pipeline (satellite.py, mrv_calculator.py) ingere dados do Sentinel-2 e sensores NIR, calcula NDVIdiff, variação de carbono orgânico do solo (SOC), linha de base VM0042 e gera relatório de créditos por fazenda/período. Output serializado e enviado ao Cartesi DApp.
+          <div class="arch-layer-components">
+            <span class="tag tag-gold">satellite.py</span>
+            <span class="tag tag-gold">mrv_calculator.py</span>
+            <span class="tag tag-gray">pandas / numpy</span>
+            <span class="tag tag-gray">scikit-learn</span>
+            <span class="tag tag-gray">rasterio</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label" style="color:var(--blue)">
+          <span class="arch-layer-num" style="color:rgba(74,144,200,0.2)">3</span>
+          CAMADA<br>BLOCKCHAIN
+        </div>
+        <div class="arch-layer-content">
+          <strong>Cartesi Rollup + Smart Contracts</strong><br>
+          O Cartesi Rollup executa os cálculos MRV (VM0042 para SOIL, VM0015 para REDD+, VM0047 para ARR) num ambiente Linux determinístico e verificável pela L1 (Ethereum/Base). Smart contracts gerenciam emissão, vesting, burn e registro de cada crédito. Cada tonelada de CO₂e tem um hash único rastreável on-chain.
+          <div class="arch-layer-components">
+            <span class="tag tag-blue">Cartesi Rollup</span>
+            <span class="tag tag-blue">EVM L1</span>
+            <span class="tag tag-gray">IPFS metadata</span>
+            <span class="tag tag-gray">Merkle proofs</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-layer" style="border-color:rgba(56,208,112,0.3);border-radius:0 0 8px 8px">
+        <div class="arch-layer-label" style="color:var(--accent)">
+          <span class="arch-layer-num" style="color:rgba(56,208,112,0.2)">4</span>
+          CAMADA<br>MERCADO
+        </div>
+        <div class="arch-layer-content">
+          <strong>Tokens e Marketplace</strong><br>
+          4 classes de tokens ERC-20 (CCT-SOIL, CCT-REDD, CCT-BIO, CCT-ARR) representam créditos verificados. Integração com exchanges voluntárias (Toucan, KlimaDAO, Xpansiv) e acesso direto a compradores corporativos via API.
+          <div class="arch-layer-components">
+            <span class="tag tag-green">CCT-SOIL</span>
+            <span class="tag tag-green">CCT-REDD</span>
+            <span class="tag tag-green">CCT-BIO</span>
+            <span class="tag tag-green">CCT-ARR</span>
+            <span class="tag tag-gray">ERC-20</span>
+            <span class="tag tag-gray">CVM-compliant</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <h3>Diagrama de Fluxo de Dados</h3>
+    <pre><span class="cm">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="cm">│                         CAMPO                                   │</span>
+<span class="kw">Sentinel-2</span> → Band 4,8,11 → NDVI / SWIR tiles (10m)              
+<span class="kw">NIR Sensor</span> → SOC %  → calibrated soil carbon g/kg               
+<span class="cm">└────────────────────────────┬────────────────────────────────────┘</span>
+                             ↓
+<span class="cm">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="cm">│                      PIPELINE PYTHON                            │</span>
+satellite.py → download → clip → cloud_mask → export_geotiff     
+mrv_calculator.py → VM0042/VM0015/VM0047 → ΔC_soil + ΔC_agb → net tCO₂e/ha   
+output: { farm_id, period, credits, hash, evidence_uri }          
+<span class="cm">└────────────────────────────┬────────────────────────────────────┘</span>
+                             ↓
+<span class="cm">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="cm">│                    CARTESI DAPP                                 │</span>
+Linux runtime → verify inputs → run MRV model (VM0042/VM0015/VM0047) → produce proof 
+Rollup proof → submitted to L1 → finalized → emit credits_log     
+<span class="cm">└────────────────────────────┬────────────────────────────────────┘</span>
+                             ↓
+<span class="cm">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="cm">│                    SMART CONTRACTS                              │</span>
+CCTFactory.sol → mint(farm, amount, token_class) → CCT-SOIL token 
+RegistryContract.sol → credit_id → IPFS metadata pointer          
+<span class="cm">└─────────────────────────────────────────────────────────────────┘</span></pre>
+  </section>
+
+  <!-- 5. MRV STACK -->
+  <section id="mrv-stack">
+    <h2><span class="section-num">05</span>Stack de MRV</h2>
+
+    <h3>Sentinel-2: Monitoramento Satelital</h3>
+    <p>O satélite Sentinel-2 (ESA/Copernicus) oferece imagens multiespectrais de 10m de resolução com revisita de 5 dias, disponíveis gratuitamente via API. O pipeline da CarbonChain consome as bandas 4 (Red), 8 (NIR), 11 e 12 (SWIR) para calcular índices de vegetação e estimar biomassa acima do solo (AGB).</p>
+
+    <div class="formula">
+      NDVI = (Band8 - Band4) / (Band8 + Band4)
+      <div class="formula-comment">Normalized Difference Vegetation Index — proxy de biomassa e cobertura vegetal. Varia de -1 a +1, onde valores &gt; 0.5 indicam vegetação densa.</div>
+    </div>
+
+    <div class="formula">
+      AGB (t/ha) = a × e^(b × NDVI)   [parâmetros a, b calibrados por bioma]
+      <div class="formula-comment">Estimativa de biomassa acima do solo via relação alométrica com NDVI. Parâmetros calibrados para Cerrado, Mata Atlântica e Amazônia.</div>
+    </div>
+
+    <h4>Implementação em satellite.py</h4>
+    <pre><span class="kw">from</span> sentinelhub <span class="kw">import</span> SHConfig, SentinelHubRequest, DataCollection, BBox
+
+<span class="kw">class</span> SentinelMRV:
+    <span class="kw">def</span> __init__(self, config: SHConfig):
+        self.config = config
+    
+    <span class="kw">def</span> fetch_tile(self, bbox: BBox, date_range: tuple) -> np.ndarray:
+        <span class="str">"""Download Sentinel-2 L2A tile for given bbox and period."""</span>
+        request = SentinelHubRequest(
+            evalscript=<span class="str">EVALSCRIPT_NDVI_SOC</span>,
+            input_data=[DataCollection.SENTINEL2_L2A],
+            responses=[<span class="str">"default"</span>],
+            bbox=bbox, time_interval=date_range,
+            config=self.config
+        )
+        <span class="kw">return</span> request.get_data()[<span class="num">0</span>]
+    
+    <span class="kw">def</span> calculate_ndvi_diff(self, tile_t0, tile_t1) -> float:
+        <span class="str">"""ΔNDVImedian entre dois períodos — proxy de ganho de carbono."""</span>
+        ndvi_t0 = np.median(tile_t0[..., <span class="num">0</span>])
+        ndvi_t1 = np.median(tile_t1[..., <span class="num">0</span>])
+        <span class="kw">return</span> ndvi_t1 - ndvi_t0</pre>
+
+    <h3>Sensores NIR/MIR de Solo</h3>
+    <p>Sensores Near-Infrared (NIR) e Mid-Infrared (MIR) medem o teor de carbono orgânico do solo (SOC — Soil Organic Carbon) de forma não-destrutiva. O modelo operacional da CarbonChain utiliza <strong>sensores compartilhados operados por técnicos itinerantes</strong> — um técnico percorre fazendas geograficamente próximas com o mesmo equipamento, realizando coletas periódicas. Conforme o projeto escala, novos técnicos e sensores são adicionados proporcionalmente à demanda e à dispersão geográfica das fazendas.</p>
+
+    <table>
+      <thead>
+        <tr><th>Parâmetro</th><th>Método</th><th>Precisão</th><th>Frequência</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="accent">SOC %</td>
+          <td>NIR reflectância (1350–2500nm)</td>
+          <td>±0.15% (RMSE)</td>
+          <td>Semanal</td>
+        </tr>
+        <tr>
+          <td class="accent">Bulk density</td>
+          <td>Equação de pedotransferência</td>
+          <td>±0.08 g/cm³</td>
+          <td>Mensal</td>
+        </tr>
+        <tr>
+          <td class="accent">pH solo</td>
+          <td>Sensor eletroquímico</td>
+          <td>±0.1 pH</td>
+          <td>Semanal</td>
+        </tr>
+        <tr>
+          <td class="accent">Temperatura/umidade</td>
+          <td>Sensor capacitivo</td>
+          <td>±0.3°C / ±2%</td>
+          <td>Horária</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Cálculo VM0042: Exemplo Prático</h3>
+    <p>Para uma fazenda de 800 ha no Cerrado com conversão de pastagem degradada para integração lavoura-pecuária-floresta (iLPF) — distribuída em 600 ha de solo agrícola, 160 ha de Reserva Legal e 40 ha de restauração ativa:</p>
+
+    <div class="formula">
+      ΔC_SOC = (SOC_t1 - SOC_t0) × Bulk_density × Depth × Area × (44/12)
+      <div class="formula-comment">Variação de carbono orgânico do solo convertida para tCO₂e. Depth = 30cm (padrão VM0042), Fator 44/12 = conversão C → CO₂. Aplicado sobre os 600 ha de solo agrícola.</div>
+    </div>
+
+    <div class="callout blue">
+      <div class="callout-title">Exemplo: 800 ha iLPF no Cerrado — modelo base CarbonChain</div>
+      <p>ΔC_SOC (600 ha solo) = 0.8% × 1.3 g/cm³ × 0.3m × 600ha × 10⁴ × (44/12) ≈ <strong>~6.864 tCO₂e bruto</strong><br>
+      Receita bruta total (4 ativos — solo + RL + biodiversidade + restauração): <strong>~USD 21.400/ano</strong><br>
+      Após desconto incerteza Verra (20%) + buffer retido (15%): <strong>~USD 15.066 vendável/ano</strong><br>
+      Produtor (80%): <strong>~USD 12.053/ano</strong> · CarbonChain (20%): <strong>~USD 3.013/ano</strong><br>
+      Retorno acumulado produtor em 10 anos (líquido IR + buffer liberado): <strong>~USD 100.000 · ROI ~685%</strong></p>
+    </div>
+  </section>
+
+  <!-- 6. CARTESI -->
+  <section id="cartesi">
+    <h2><span class="section-num">06</span>Cartesi Rollup</h2>
+
+    <p>O Cartesi é uma solução de Layer-2 que permite executar <strong>computação de propósito geral num ambiente Linux</strong> com a segurança e verificabilidade de uma blockchain. Esse é o diferencial técnico central da CarbonChain.</p>
+
+    <h3>Por Que Cartesi?</h3>
+
+    <div class="callout">
+      <div class="callout-title">O Problema das Redes Tradicionais</div>
+      <p>Executar cálculos MRV diretamente na EVM seria impossível: os modelos (VM0042, VM0015, VM0047) envolvem operações de ponto flutuante, arrays multidimensionais (matrizes NDVI) e chamadas a bibliotecas científicas (numpy, scipy) — tudo incompatível com a EVM. Soluções como oráculos externalizam o cálculo mas sacrificam a auditabilidade.</p>
+    </div>
+
+    <p>O Cartesi resolve isso com a <strong>Cartesi Machine</strong>: uma RISC-V virtual machine determinística que executa Linux. Qualquer programa que roda em Linux — incluindo nosso pipeline Python com numpy, pandas e scikit-learn — roda na Cartesi Machine e produz um resultado verificável on-chain.</p>
+
+    <h3>Fluxo de Verificação</h3>
+
+    <table>
+      <thead>
+        <tr><th>Etapa</th><th>O que acontece</th><th>Ator</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="accent">1. Input</td>
+          <td>Dados MRV (tiles NDVI + leituras NIR) são submetidos como inputs na Cartesi DApp</td>
+          <td class="subtext">CarbonChain</td>
+        </tr>
+        <tr>
+          <td class="accent">2. Compute</td>
+          <td>Cartesi Machine executa mrv_calculator.py determinísticamente</td>
+          <td class="subtext">Nós Cartesi</td>
+        </tr>
+        <tr>
+          <td class="accent">3. Output</td>
+          <td>Hash do resultado (créditos por fazenda) submetido à L1</td>
+          <td class="subtext">Cartesi Rollup</td>
+        </tr>
+        <tr>
+          <td class="accent">4. Challenge</td>
+          <td>Período de disputa (7 dias): qualquer parte pode contestar via fraud proof</td>
+          <td class="subtext">Público</td>
+        </tr>
+        <tr>
+          <td class="accent">5. Finalize</td>
+          <td>Após período sem contestação, resultado é finalizado e créditos são mintados</td>
+          <td class="subtext">Smart Contract</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <div class="callout-title">Implicação para Credibilidade</div>
+      <p>Qualquer comprador de crédito CCT-* pode re-executar o cálculo MRV correspondente com os mesmos inputs públicos e verificar que o output bate com o registrado on-chain. Isso é <strong>auditabilidade sem auditores</strong> — o mecanismo de mercado substitui a confiança institucional.</p>
+    </div>
+
+    <h3>Stack Técnico Cartesi</h3>
+    <pre><span class="cm"># Estrutura do DApp Cartesi para CarbonChain</span>
+cartesi/
+├── Dockerfile          <span class="cm"># Linux image com Python 3.11 + deps científicas</span>
+├── requirements.txt    <span class="cm"># numpy, pandas, scikit-learn, rasterio</span>
+└── dapp.py             <span class="cm"># Handler principal</span>
+
+<span class="kw">async def</span> handle_advance(data: dict) -> str:
+    <span class="cm"># Deserializa input MRV</span>
+    mrv_payload = decode_hex(data[<span class="str">"payload"</span>])
+    farm_id, tiles, sensor_readings = parse_mrv(mrv_payload)
+    
+    <span class="cm"># Executa cálculo MRV conforme metodologia do token (VM0042/VM0015/VM0047)</span>
+    credits = mrv_calculate(
+        ndvi_tiles=tiles,
+        soc_readings=sensor_readings,
+        farm_metadata=get_farm_config(farm_id)
+    )
+    
+    <span class="cm"># Emite notice para L1 → mint tokens</span>
+    notice = encode_notice(farm_id=farm_id, credits=credits)
+    <span class="kw">await</span> rollup.send_notice(notice)
+    <span class="kw">return</span> <span class="str">"accept"</span></pre>
+  </section>
+
+  <!-- 7. TOKENOMICS -->
+  <section id="tokenomics">
+    <h2><span class="section-num">07</span>Tokenomics</h2>
+
+    <p>A CarbonChain emite quatro classes de tokens ERC-20, cada uma representando créditos de carbono verificados por uma metodologia específica. Cada token corresponde a <strong>1 tCO₂e</strong> verificado e registrado on-chain.</p>
+
+    <div class="token-grid">
+      <div class="token-card">
+        <div class="token-symbol" style="color:var(--gold)">CCT-SOIL</div>
+        <div class="token-name">Carbon Credit Token — Soil</div>
+        <div class="token-desc">Sequestro de carbono orgânico no solo. Baseado na metodologia VM0042 (Verra). Monitorado por sensores NIR + Sentinel-2 SWIR. Principal token do portfólio.</div>
+        <div class="token-tags">
+          <span class="tag tag-gold">VM0042</span>
+          <span class="tag tag-gold">Verra VCS</span>
+          <span class="tag tag-gray">SOC ΔC/ha</span>
+          <span class="tag tag-gray">Contrato 10a</span>
+        </div>
+      </div>
+      <div class="token-card">
+        <div class="token-symbol" style="color:var(--accent)">CCT-REDD</div>
+        <div class="token-name">Carbon Credit Token — REDD+</div>
+        <div class="token-desc">Redução de emissões por desmatamento e degradação florestal. Monitorado por análise de séries temporais NDVI. Aplicável em propriedades com vegetação nativa ameaçada.</div>
+        <div class="token-tags">
+          <span class="tag tag-green">REDD+</span>
+          <span class="tag tag-green">VM0015</span>
+          <span class="tag tag-gray">Deforestation alert</span>
+          <span class="tag tag-gray">Contrato 10a</span>
+        </div>
+      </div>
+      <div class="token-card">
+        <div class="token-symbol" style="color:var(--blue)">CCT-BIO</div>
+        <div class="token-name">Carbon Credit Token — Biodiversity</div>
+        <div class="token-desc">Créditos de biodiversidade e serviços ecossistêmicos. Metodologia Plan Vivo PM002. Alta precificação premium (USD 25–50/t). Exige auditoria de espécies.</div>
+        <div class="token-tags">
+          <span class="tag tag-blue">Plan Vivo</span>
+          <span class="tag tag-blue">PM002</span>
+          <span class="tag tag-gray">Biodiversity score</span>
+          <span class="tag tag-gray">Ciclo Plan Vivo 30a+</span>
+          <span class="tag tag-gray">Fase 2</span>
+        </div>
+      </div>
+      <div class="token-card">
+        <div class="token-symbol" style="color:var(--red)">CCT-ARR</div>
+        <div class="token-name">Carbon Credit Token — ARR</div>
+        <div class="token-desc">Reflorestamento, aflorestamento e revegetação. Metodologia AR-ACM0003 (CDM) ou VM0047 (Verra). Créditos de longo prazo com co-benefícios hídricos e de biodiversidade.</div>
+        <div class="token-tags">
+          <span class="tag tag-red">AR-ACM0003</span>
+          <span class="tag tag-red">VM0047</span>
+          <span class="tag tag-gray">AGB growth</span>
+          <span class="tag tag-gray">Ciclo Verra 30a</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Parâmetros de Emissão</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Ciclo de Verificação</th>
+          <th>Preço Base (sem premium)</th>
+          <th>Supply</th>
+          <th>Fase</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="gold">CCT-SOIL</td>
+          <td>Anual (Dez–Jan)</td>
+          <td>USD 12–20 / tCO₂e</td>
+          <td>Dinâmico</td>
+          <td class="accent">Fase 1</td>
+        </tr>
+        <tr>
+          <td class="accent">CCT-REDD</td>
+          <td>Semestral</td>
+          <td>USD 7–25 / tCO₂e</td>
+          <td>Dinâmico</td>
+          <td class="accent">Fase 1</td>
+        </tr>
+        <tr>
+          <td style="color:var(--red)">CCT-ARR</td>
+          <td>Anual (crescimento)</td>
+          <td>USD 18–50 / tCO₂e</td>
+          <td>Dinâmico</td>
+          <td class="accent">Fase 1</td>
+        </tr>
+        <tr>
+          <td style="color:var(--blue)">CCT-BIO</td>
+          <td>Anual + auditoria de campo</td>
+          <td>USD 15–80 / crédito</td>
+          <td>Limitado</td>
+          <td class="subtext">Fase 2</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout gold">
+      <div class="callout-title">Preços base — upside com selos premium</div>
+      <p>Os valores acima refletem o mercado spot sem certificações adicionais. Ratings BeZero ou Sylvera (AA/AAA) agregam <strong>10–30% por nota</strong>, podendo multiplicar o preço por 3–4x no topo. O selo CCP do ICVCM acrescenta <strong>15–25%</strong> e é exigido por compradores institucionais de maior porte. Para detalhamento completo dos fatores de precificação e selos disponíveis, consultar o documento <em>Guia de Mercado — Tipos de Verificação</em>.</p>
+    </div>
+
+    <h3>Mecanismo de Emissão e Queima</h3>
+    <ul class="bullet-list">
+      <li><strong>Emissão (Mint):</strong> Ocorre após finalização do rollup Cartesi, verificação on-chain dos dados MRV e registro no Verra Registry. Cada mint está associado a um credit_id único.</li>
+      <li><strong>Buffer de Permanência:</strong> 15% dos créditos calculados são retidos num pool de buffer por contrato inteligente. Liberados após o período de permanência da metodologia.</li>
+      <li><strong>Queima (Retire):</strong> O comprador final chama retire(tokenId) — o token é queimado e um certificado de aposentadoria é emitido com metadados IPFS. Irreversível.</li>
+      <li><strong>Revogação:</strong> Em caso de fraude ou perda de permanência, créditos do buffer são queimados para compensar. Smart contract com papel de REVOKER controlado pela CarbonChain.</li>
+    </ul>
+
+    <h3>Estrutura de Lançamento em 2 Fases (CVM)</h3>
+    <div class="phase-grid">
+      <div class="phase-card active">
+        <div class="phase-badge">Fase 1 · Ativo</div>
+        <div class="phase-title">Utility Token<br><em style="font-size:0.85rem;font-weight:300">Representação de Crédito</em></div>
+        <ul class="phase-list">
+          <li>CCT-SOIL, CCT-REDD e CCT-ARR</li>
+          <li>1 token = 1 tCO₂e verificado</li>
+          <li>Transferível P2P e para exchanges</li>
+          <li>Sem promessa de rendimento</li>
+          <li>Classificação: utility (não-security)</li>
+          <li>Foco: compradores institucionais internacionais</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <div class="phase-badge">Fase 2 · Futuro</div>
+        <div class="phase-title">Token Regulamentado<br><em style="font-size:0.85rem;font-weight:300">Pós-marco legal CVM</em></div>
+        <ul class="phase-list">
+          <li>CCT-BIO adicionado (auditoria de campo)</li>
+          <li>Possível componente de rendimento</li>
+          <li>Oferta pública via CVM</li>
+          <li>Tokenização de receitas futuras</li>
+          <li>KYC/AML robusto para investidores BR</li>
+          <li>Integração com B3 / BVMF</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. METODOLOGIA -->
+  <section id="metodologia">
+    <h2><span class="section-num">08</span>Metodologias</h2>
+
+    <h3>VM0042 — Soil Carbon (Principal)</h3>
+    <p>A metodologia VM0042 da Verra (Verified Carbon Standard) quantifica o aumento do carbono orgânico do solo em projetos agrícolas. É a metodologia mais adequada para iLPF, agricultura regenerativa e pastagem melhorada no Brasil.</p>
+
+    <div class="formula">
+      GHG_net = ΔC_SOC_actual - ΔC_SOC_baseline - GHG_leakage - GHG_machinery
+      <div class="formula-comment">Créditos líquidos = variação SOC real − variação SOC baseline − vazamento − emissões de maquinário e insumos. Resultado em tCO₂e/ha/ano.</div>
+    </div>
+
+    <h4>Requisitos de Elegibilidade VM0042</h4>
+    <ul class="bullet-list">
+      <li>Área mínima: 100 ha (via PoA, múltiplas fazendas menores se agrupam)</li>
+      <li>Documentação de posse/arrendamento da terra</li>
+      <li>Linha de base estabelecida por amostragem de solo em T0</li>
+      <li>Additionality: mudança de prática agrícola documentada</li>
+      <li>Permanência: contrato mínimo de 10 anos</li>
+    </ul>
+
+    <h3>REDD+ — Desmatamento Evitado</h3>
+    <p>O mecanismo REDD+ (Reducing Emissions from Deforestation and Forest Degradation) remunera a preservação de vegetação nativa. A CarbonChain usa análise de séries temporais NDVI + alertas PRODES/DETER para monitoramento contínuo.</p>
+
+    <table>
+      <thead>
+        <tr><th>Indicador</th><th>Fonte</th><th>Frequência</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="accent">Cobertura florestal</td>
+          <td>Sentinel-2 + MapBiomas</td>
+          <td>Mensal</td>
+        </tr>
+        <tr>
+          <td class="accent">Alertas desmatamento</td>
+          <td>PRODES/DETER (INPE)</td>
+          <td>Semanal</td>
+        </tr>
+        <tr>
+          <td class="accent">Degradação florestal</td>
+          <td>Índice de degradação (NDFI)</td>
+          <td>Bimestral</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Plan Vivo PM002 (Fase 2) e ARR — Fase 1</h3>
+    <p>O Plan Vivo é o standard mais rigoroso para projetos com co-benefícios socioambientais — exige mapeamento de espécies, engajamento comunitário e relatórios anuais detalhados. Por isso o CCT-BIO está posicionado na Fase 2, quando a CarbonChain tiver recursos de campo maiores. A metodologia ARR (Afforestation, Reforestation, Revegetation) da Verra (VM0047) é mais acessível e está ativa desde a Fase 1.</p>
+  </section>
+
+  <!-- 9. COMPLIANCE -->
+  <section id="compliance">
+    <h2><span class="section-num">09</span>Compliance Regulatório</h2>
+
+    <h3>Marco Legal Brasileiro do Carbono</h3>
+    <p>A Lei 15.797/2025 estabeleceu o Sistema Brasileiro de Comércio de Emissões (SBCE), criando um marco regulatório para o mercado de carbono no Brasil. Embora o SBCE foque inicialmente no mercado regulado (obrigatório), o artigo 47 abre espaço explícito para o mercado voluntário.</p>
+
+    <div class="callout gold">
+      <div class="callout-title">Oportunidade Regulatória</div>
+      <p>A lei exige rastreabilidade dos créditos num registro central (previsto no SINARE). A infraestrutura de MRV on-chain da CarbonChain está tecnicamente alinhada com esses requisitos antes mesmo de serem regulamentados — potencialmente tornando-nos o padrão técnico de facto.</p>
+    </div>
+
+    <h3>CVM e a Classificação dos Tokens</h3>
+    <p>A Comissão de Valores Mobiliários (CVM) publicou orientações sobre criptoativos que impactam a estrutura de tokens da CarbonChain:</p>
+
+    <table>
+      <thead>
+        <tr><th>Critério CVM</th><th>CCT-SOIL / REDD / ARR (Fase 1)</th><th>CCT-BIO (Fase 2)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Expectativa de lucro</td>
+          <td class="accent">Não — representação de ativo real</td>
+          <td class="subtext">Possível — estrutura de rendimento</td>
+        </tr>
+        <tr>
+          <td>Esforço de terceiros</td>
+          <td class="accent">Parcial — MRV é da CarbonChain</td>
+          <td class="subtext">Alto — dependência da CarbonChain</td>
+        </tr>
+        <tr>
+          <td>Classificação provável</td>
+          <td class="accent">Utility Token / Commodity Token</td>
+          <td class="subtext">Security Token (oferta regulada)</td>
+        </tr>
+        <tr>
+          <td>Registro CVM necessário</td>
+          <td class="accent">Não (para Fase 1)</td>
+          <td class="subtext">Sim — CVM Instrução 88</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Estrutura Legal Recomendada</h3>
+    <ul class="bullet-list">
+      <li><strong>Holding BR (Ltda ou S.A.):</strong> Titularidade do PoA Verra, contratos com produtores, receita operacional em BRL</li>
+      <li><strong>Entidade Offshore (Delaware C-Corp ou Cayman):</strong> Emissão de tokens CCT-*, captação internacional, contratos com exchanges globais</li>
+      <li><strong>SPE por Projeto (opcional Fase 2):</strong> Isolamento de risco por projeto REDD+ ou ARR de grande escala</li>
+    </ul>
+
+    <div class="callout red">
+      <div class="callout-title">Risco Regulatório a Monitorar</div>
+      <p>A CVM ainda não publicou regulamentação específica para tokens de carbono. A estratégia Fase 1 (utility token sem promessa de rendimento) minimiza o risco, mas recomenda-se acompanhamento com assessor jurídico especializado em regulação de ativos digitais e pareceres formais antes de qualquer oferta pública.</p>
+    </div>
+
+    <h3>Contratos com Produtores</h3>
+    <p>Cada produtor assina um contrato de participação no PoA que estabelece: (i) compromisso de <strong>10 anos</strong> de manutenção das práticas agrícolas — prazo alinhado ao ciclo de buffer Verra e necessário para maximizar o retorno acumulado; (ii) direito de saída com penalidade proporcional ao tempo restante; (iii) divisão de receitas (80% produtor / 20% CarbonChain); (iv) autorização para monitoramento remoto por satélite e visitas técnicas periódicas para coleta de dados de solo; (v) cláusula de buffer de permanência (15% retidos em contrato inteligente, liberados progressivamente entre os anos 5 e 10).</p>
+  </section>
+
+  <!-- 10. BUSINESS MODEL -->
+  <section id="business-model">
+    <h2><span class="section-num">10</span>Modelo de Negócio</h2>
+
+    <div class="phase-grid">
+      <div class="phase-card active">
+        <div class="phase-badge">Fase 1 · 2026–2027</div>
+        <div class="phase-title">Take Rate</div>
+        <ul class="phase-list">
+          <li>20% sobre receita bruta de cada produtor</li>
+          <li>Produtor recebe 80% do valor dos créditos</li>
+          <li>Sem mensalidade — only success fee</li>
+          <li>Reduz barreira de entrada a zero</li>
+          <li>Lucrativo desde a Rodada 1 (5 fazendas)</li>
+          <li>Operação sólida a partir de ~20 fazendas</li>
+        </ul>
+      </div>
+      <div class="phase-card">
+        <div class="phase-badge">Fase 2 · 2028+</div>
+        <div class="phase-title">SaaS + Take Rate</div>
+        <ul class="phase-list">
+          <li>R$ 1.200/fazenda/ano (licença plataforma)</li>
+          <li>10% sobre receita de créditos vendidos</li>
+          <li>APIs premium para exchanges e traders</li>
+          <li>Dados MRV agregados (B2B analytics)</li>
+          <li>Serviços de compliance regulatório</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Canais de Demanda (Priorizados)</h3>
+
+    <table>
+      <thead>
+        <tr><th>Canal</th><th>Prioridade</th><th>Ticket médio</th><th>Prazo de fechamento</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="accent">Trading companies agrícolas</td>
+          <td>⬛⬛⬛ Alta</td>
+          <td>10.000–100.000 tCO₂e</td>
+          <td class="subtext">3–6 meses</td>
+        </tr>
+        <tr>
+          <td class="accent">Exchanges internacionais</td>
+          <td>⬛⬛ Média</td>
+          <td>50.000+ tCO₂e</td>
+          <td class="subtext">6–12 meses</td>
+        </tr>
+        <tr>
+          <td class="accent">Corporativos brasileiros</td>
+          <td>⬛⬛ Média</td>
+          <td>1.000–20.000 tCO₂e</td>
+          <td class="subtext">6–18 meses</td>
+        </tr>
+        <tr>
+          <td class="subtext">Varejo (DeFi/retail)</td>
+          <td>⬛ Baixa</td>
+          <td>10–1.000 tCO₂e</td>
+          <td class="subtext">18+ meses</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Escala por Rodadas</h3>
+
+    <table>
+      <thead>
+        <tr><th>Rodada</th><th>Produtores</th><th>Receita CC/ano</th><th>Resultado CC</th><th>Marco</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="gold">Rodada 1</td>
+          <td>5</td>
+          <td>USD 15.065</td>
+          <td class="accent">+USD 10.565</td>
+          <td class="subtext">Lucrativo desde o início</td>
+        </tr>
+        <tr>
+          <td>Rodada 2</td>
+          <td>15</td>
+          <td>USD 45.195</td>
+          <td class="accent">~+USD 35.000</td>
+          <td class="subtext">PoA pago, custo marginal cai</td>
+        </tr>
+        <tr>
+          <td>Rodada 3</td>
+          <td>30</td>
+          <td>USD 90.390</td>
+          <td class="accent">~+USD 70.000</td>
+          <td class="subtext">Operação sólida, equipe</td>
+        </tr>
+        <tr>
+          <td>Fase 2</td>
+          <td>300+ (cooperativa)</td>
+          <td>SaaS + 10% take</td>
+          <td class="accent">Escala</td>
+          <td class="subtext">CCT-BIO e CCT-ARR ativos</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--subtext)">* Base: 800 ha/fazenda, 4 ativos (solo + RL + biodiversidade + restauração), desconto incerteza Verra 20%, buffer 15%. Projeções de planejamento, não garantidas.</p>
+
+    <h3>Captação de Capital Pré-Receita</h3>
+    <ul class="bullet-list">
+      <li><strong>Produtores como investidores:</strong> Cada produtor arca com o setup de ~USD 12.400 (registro PoA ÷ 5, CPA, sensor NIR) — financiando coletivamente a infraestrutura do PoA. A CarbonChain não precisa de capital externo para a Rodada 1. Em troca, o produtor obtém acesso ao sistema, 80% da receita de créditos e ROI de ~685% em 10 anos.</li>
+      <li><strong>Grants:</strong> BNDES Fundo Clima, FINEP, WEF UpLink, Bezos Earth Fund — capital não-dilutivo prioritário para escala</li>
+      <li><strong>Impact Angels:</strong> Ticket R$ 150–500k, equity 5–15%, perfil ESG/climatech — a partir da Rodada 2</li>
+      <li><strong>Aceleradoras:</strong> Greentown Labs, Plug and Play Sustainability, Domo BR</li>
+      <li><strong>Pré-venda de créditos:</strong> Forward contracts com compradores estratégicos antes da certificação</li>
+    </ul>
+  </section>
+
+  <!-- 11. MERCADO -->
+  <section id="mercado">
+    <h2><span class="section-num">11</span>Mercado-Alvo</h2>
+
+    <h3>Lado Oferta: Produtores Rurais</h3>
+    <p>O Brasil tem <strong>5,07 milhões de estabelecimentos agropecuários</strong> (IBGE 2017). A CarbonChain foca inicialmente em:</p>
+    <ul class="bullet-list">
+      <li>Produtores rurais de pequeno a grande porte no Cerrado e Mata Atlântica</li>
+      <li>Operações de pecuária bovina em conversão para iLPF ou manejo melhorado</li>
+      <li>Fazendas com vegetação nativa remanescente (&gt;20% da área) para REDD+</li>
+      <li>Produtores já certificados por outras agências (IBD, Rainforest Alliance) como early adopters</li>
+    </ul>
+
+    <h3>Lado Demanda: Compradores de Créditos</h3>
+    <p>Corporações com metas Science-Based Targets (SBTi), exigências de relatório GRI/TCFD e cadeias de suprimento expostas a regulação de carbono (diretiva CBAM da UE). Trading companies como Bunge, Cargill, Louis Dreyfus e ADM têm interesse crescente em offsetting para suas cadeias agrícolas brasileiras.</p>
+
+    <div class="callout blue">
+      <div class="callout-title">Tailwind Regulatório</div>
+      <p>A diretiva CBAM (Carbon Border Adjustment Mechanism) da União Européia, em vigor desde 2026, impõe taxas de carbono sobre importações de produtos agropecuários. Isso cria demanda direta das tradings exportadoras brasileiras por créditos de carbono com rastreabilidade robusta — exatamente o que a CarbonChain fornece.</p>
+    </div>
+  </section>
+
+  <!-- 12. ROADMAP -->
+  <section id="roadmap">
+    <h2><span class="section-num">12</span>Roadmap</h2>
+
+    <div class="roadmap">
+      <div class="roadmap-item done">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 1 · Q1 2026 · Concluído</div>
+        <div class="roadmap-title">Fundação do Repositório</div>
+        <div class="roadmap-desc">GitHub setup (github.com/JonasjJonas/carbonchain), arquitetura de pastas MRV/Cartesi/token/docs, estrutura inicial do projeto. Whitepaper v1.0 (este documento).</div>
+      </div>
+
+      <div class="roadmap-item current">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 2 · Q2 2026 · Em andamento</div>
+        <div class="roadmap-title">Integração Sentinel-2 API</div>
+        <div class="roadmap-desc">Implementação de satellite.py: autenticação Sentinel Hub, download de tiles, cálculo NDVI, exportação de GeoTIFFs. Primeiros testes com fazendas-piloto no Cerrado.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 3 · Q2 2026</div>
+        <div class="roadmap-title">Pipeline MRV e Metodologias</div>
+        <div class="roadmap-desc">mrv_calculator.py com cálculo completo das três metodologias: VM0042 (SOIL), VM0015 (REDD+), VM0047 (ARR) — SOC baseline, ΔC_SOC, emissões N₂O/CH₄, leakage. Output padronizado para Cartesi DApp.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 4 · Q3 2026</div>
+        <div class="roadmap-title">Cartesi DApp + Smart Contracts</div>
+        <div class="roadmap-desc">Implementação do DApp Cartesi (dapp.py), Dockerfile com stack científica, CCTFactory.sol e RegistryContract.sol. Deploy em testnet (Sepolia). Testes de fraud proof.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 5 · Q3 2026 · Concluído Design</div>
+        <div class="roadmap-title">Tokenomics 4 Classes</div>
+        <div class="roadmap-desc">Definição de CCT-SOIL, CCT-REDD, CCT-BIO, CCT-ARR. Estratégia de 2 fases CVM. Mecanismos de mint, burn, buffer e retire. Smart contract auditado.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 6 · Q3 2026 · Em andamento</div>
+        <div class="roadmap-title">Whitepaper Técnico v1.0</div>
+        <div class="roadmap-desc">Este documento. Distribuição para parceiros, investidores e advisors jurídicos. Feedback e iteração para v1.1.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 7 · Q4 2026</div>
+        <div class="roadmap-title">Parceiros e Fazendas-Piloto</div>
+        <div class="roadmap-desc">Contratos com 3–5 fazendas-piloto no Cerrado. Primeiras visitas técnicas com sensor NIR compartilhado para coleta de dados de solo. Primeiro ciclo de monitoramento real. Dados reais para calibração dos modelos VM0042, VM0015 e VM0047.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 8 · Q1 2027</div>
+        <div class="roadmap-title">Submissão PoA à Verra</div>
+        <div class="roadmap-desc">Submissão do PoA à Verra com as 5 fazendas-piloto da Rodada 1. O PoA é estruturado desde o início para aceitar novos produtores como CPAs adicionais — cada nova rodada de fazendas entra sem necessidade de novo registro. Auditoria de terceira parte (VVB credenciado). Estimativa: 6–12 meses para aprovação.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 9 · Q3 2027</div>
+        <div class="roadmap-title">Primeiro Mint de Créditos</div>
+        <div class="roadmap-desc">Após aprovação Verra: primeiro batch de CCT-SOIL e CCT-REDD mintados. Oferta a compradores estratégicos (trading companies). Receita operacional.</div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-phase">Etapa 10 · 2028</div>
+        <div class="roadmap-title">Escala e Fase 2</div>
+        <div class="roadmap-desc">200+ fazendas. Lançamento CCT-BIO (Fase 2). Integração com exchanges (Toucan, Xpansiv). Início de processo regulatório CVM para Fase 2. SaaS fees ativos.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. RISCOS -->
+  <section id="riscos">
+    <h2><span class="section-num">13</span>Riscos e Mitigações</h2>
+
+    <table>
+      <thead>
+        <tr><th>Risco</th><th>Probabilidade</th><th>Impacto</th><th>Mitigação</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="accent">Reclassificação CVM dos tokens como securities</td>
+          <td>Média</td>
+          <td>Alto</td>
+          <td class="subtext">Fase 1 como utility token; assessoria jurídica contínua; Fase 2 já planejada com registro CVM</td>
+        </tr>
+        <tr>
+          <td class="accent">Rejeição do PoA pela Verra</td>
+          <td>Baixa-Média</td>
+          <td>Alto</td>
+          <td class="subtext">Contrato com VVB experiente; dados robustos de baseline; metodologia VM0042 bem documentada</td>
+        </tr>
+        <tr>
+          <td class="accent">Precisão insuficiente do MRV satelital</td>
+          <td>Média</td>
+          <td>Médio</td>
+          <td class="subtext">Combinação satélite + sensores NIR físicos; amostragem de solo de referência; fator de incerteza no cálculo</td>
+        </tr>
+        <tr>
+          <td class="accent">Baixa adesão de produtores</td>
+          <td>Média</td>
+          <td>Alto</td>
+          <td class="subtext">Parceria com cooperativas e consultorias agrícolas como canal; modelo zero-upfront; cases de sucesso</td>
+        </tr>
+        <tr>
+          <td class="accent">Queda de preço de créditos de carbono</td>
+          <td>Média</td>
+          <td>Médio</td>
+          <td class="subtext">Diversificação em 4 classes; contratos forward com compradores; foco em créditos premium de alta qualidade</td>
+        </tr>
+        <tr>
+          <td class="accent">Vulnerabilidade no smart contract</td>
+          <td>Baixa</td>
+          <td>Alto</td>
+          <td class="subtext">Auditoria de segurança por firma especializada antes do mainnet; upgradeable proxy; multisig</td>
+        </tr>
+        <tr>
+          <td class="accent">Mudança regulatória no Marco do Carbono</td>
+          <td>Baixa-Média</td>
+          <td>Médio</td>
+          <td class="subtext">Alinhamento com SINARE desde início; participação em consultas públicas; flexibilidade arquitetural</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 14. REFERÊNCIAS -->
+  <section id="referencias">
+    <h2><span class="section-num">14</span>Referências</h2>
+
+    <h4>Metodologias e Standards</h4>
+    <ul class="bullet-list">
+      <li>Verra. <em>VM0042: Improved Agricultural Land Management</em>, versão 2.0, 2022</li>
+      <li>Verra. <em>VM0015: Methodology for Avoided Unplanned Deforestation</em>, versão 1.1, 2012</li>
+      <li>UNFCCC. <em>AR-ACM0003: Afforestation and Reforestation of Lands</em>, versão 2.0, 2012</li>
+      <li>Plan Vivo Foundation. <em>Plan Vivo Standard PM002</em>, versão 2023</li>
+      <li>Gold Standard. <em>Land Use and Forests Activity Requirements</em>, 2022</li>
+    </ul>
+
+    <h4>Tecnologia</h4>
+    <ul class="bullet-list">
+      <li>Cartesi. <em>Cartesi Machine Technical Specification</em>, docs.cartesi.io, 2024</li>
+      <li>ESA Copernicus. <em>Sentinel-2 User Handbook</em>, ESA, 2022</li>
+      <li>Sentinel Hub. <em>Process API Documentation</em>, docs.sentinel-hub.com, 2024</li>
+    </ul>
+
+    <h4>Regulação</h4>
+    <ul class="bullet-list">
+      <li>Brasil. <em>Lei Nº 15.797 — Sistema Brasileiro de Comércio de Emissões</em>, 2025</li>
+      <li>CVM. <em>Resolução CVM Nº 175 — Fundos de Investimento</em>, 2022</li>
+      <li>CVM. <em>Ofício Circular CVM/SRE — Criptoativos</em>, 2023</li>
+    </ul>
+
+    <h4>Mercado</h4>
+    <ul class="bullet-list">
+      <li>BloombergNEF. <em>Carbon Markets Outlook 2024</em></li>
+      <li>Taskforce on Scaling Voluntary Carbon Markets (TSVCM). <em>Final Report</em>, 2021</li>
+      <li>IBGE. <em>Censo Agropecuário 2017</em></li>
+    </ul>
+
+    <hr class="section-divider">
+
+    <div style="text-align:center;padding:2rem 0;color:var(--subtext);font-family:var(--mono);font-size:11.5px;line-height:2">
+      CarbonChain Whitepaper Técnico v1.0 — Março 2026<br>
+      Documento interno. Não constitui oferta de valores mobiliários.<br>
+      github.com/JonasjJonas/carbonchain<br>
+      <span style="color:var(--muted)">© 2026 CarbonChain. Todos os direitos reservados.</span>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a');
+const progressBar = document.getElementById('progress-bar');
+
+function updateNav() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.body.scrollHeight - window.innerHeight;
+  progressBar.style.width = Math.min((scrollTop / docHeight) * 100, 100) + '%';
+
+  let currentId = '';
+  sections.forEach(section => {
+    if (window.scrollY >= section.offsetTop - 120) {
+      currentId = section.id;
+    }
+  });
+
+  navLinks.forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + currentId);
+  });
+}
+
+window.addEventListener('scroll', updateNav, { passive: true });
+updateNav();
+</script>
+
+</body>
+</html>
