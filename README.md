@@ -123,5 +123,5 @@ Hash de exemplo:
 
 Proprietary License
 
-Copyright (c) 2026 JonasjJonas
+Copyright (c) 2026 JonasjJonas 
 All rights reserved.
