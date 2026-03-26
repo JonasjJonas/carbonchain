@@ -31,6 +31,14 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from scipy.ndimage import gaussian_filter
 
+# Raiz do repositório e carregamento automático do .env
+ROOT = Path(__file__).resolve().parent.parent
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / '.env')
+except ImportError:
+    pass  # python-dotenv opcional — credenciais podem vir de variáveis de ambiente
+
 # sentinelhub importado condicionalmente — evita crash sem credenciais
 try:
     from sentinelhub import (
@@ -559,6 +567,7 @@ def buscar_sentinel2_api(
     fazenda_key: str = "itumbiara",
     data_inicio: str = None,
     data_fim: str = None,
+    fazenda_override: dict = None,  # bbox dinâmico vindo do pipeline.py
 ) -> tuple:
     """
     Busca dados reais Sentinel-2 via Copernicus Data Space API.
@@ -590,13 +599,18 @@ def buscar_sentinel2_api(
             "   3. Rode novamente com --api\n"
         )
 
+    # SHConfig não aceita kwargs no construtor — atributos devem ser setados depois
     config = SHConfig()
     config.sh_client_id     = client_id
     config.sh_client_secret = client_secret
     config.sh_base_url      = "https://sh.dataspace.copernicus.eu"
     config.sh_token_url     = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
 
-    fazenda = FAZENDAS.get(fazenda_key, FAZENDAS["itumbiara"])
+    # Usa bbox dinâmico do pipeline se fornecido, senão busca no dict FAZENDAS
+    if fazenda_override:
+        fazenda = fazenda_override
+    else:
+        fazenda = FAZENDAS.get(fazenda_key, FAZENDAS["itumbiara"])
     bbox    = BBox(bbox=fazenda["bbox"], crs=CRS.WGS84)
     tamanho = bbox_to_dimensions(bbox, resolution=RESOLUCAO_M)
 
@@ -616,9 +630,12 @@ def buscar_sentinel2_api(
         evalscript=EVALSCRIPT_MULTIBAND,
         input_data=[
             SentinelHubRequest.input_data(
-                data_collection=DataCollection.SENTINEL2_L2A,
+                data_collection=DataCollection.SENTINEL2_L2A.define_from(
+                    "s2l2a_cdse",
+                    service_url="https://sh.dataspace.copernicus.eu"
+                ),
                 time_interval=(data_inicio, data_fim),
-                mosaicking_order="leastCC",   # menor cobertura de nuvem primeiro
+                mosaicking_order="leastCC",
             )
         ],
         responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],
