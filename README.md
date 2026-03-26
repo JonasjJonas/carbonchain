@@ -121,4 +121,7 @@ Hash de exemplo:
 
 ## Licença
 
-MIT
+Proprietary License
+
+Copyright (c) 2026 JonasjJonas
+All rights reserved.
