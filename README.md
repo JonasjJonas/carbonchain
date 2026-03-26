@@ -91,11 +91,6 @@ carbonchain/
 
 ## Início rápido
 
-```bash
-# Pipeline completo — prospecção + MRV satélite
-cd prospeccao
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 10
-```
 
 Documentação completa de instalação, argumentos e outputs: [`prospeccao/README.md`](prospeccao/README.md)
 
