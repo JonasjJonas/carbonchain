@@ -30,6 +30,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from scipy.ndimage import gaussian_filter
+from matplotlib.path import Path as MplPath
 
 # Raiz do repositório e carregamento automático do .env
 ROOT = Path(__file__).resolve().parent.parent
@@ -172,7 +173,7 @@ def estimar_soc_relativo(ndwi: np.ndarray, ndvi: np.ndarray) -> np.ndarray:
 def gerar_pontos_amostragem(
     ndvi: np.ndarray,
     soc_proxy: np.ndarray,
-    n_pontos: int = 120,
+    n_pontos: int = None,
     area_ha: float = 800.0
 ) -> list[dict]:
     """
@@ -187,6 +188,12 @@ def gerar_pontos_amostragem(
     """
     h, w = ndvi.shape
     pontos = []
+
+    # ── Densidade de amostragem baseada na área real (VM0042 §7.3) ──
+    # Padrão: 1 ponto a cada 8 ha, mínimo 30, máximo 200
+    if n_pontos is None:
+        n_pontos = max(30, min(200, int(area_ha / 8)))
+        print(f"   Pontos de amostragem calculados: {n_pontos} ({area_ha:.0f} ha ÷ 8 ha/ponto)")
 
     # ── Grade regular (30% dos pontos) ──
     n_grid = int(n_pontos * 0.30)
@@ -229,6 +236,12 @@ def gerar_pontos_amostragem(
                 "soc_proxy": round(float(soc_proxy[cy, cx]), 4),
                 "prioridade": prioridade,
             })
+
+    # Remove pontos fora do polígono da fazenda (NDVI é NaN após máscara)
+    pontos = [
+        p for p in pontos
+        if not np.isnan(ndvi[p["row"], p["col"]])
+    ]
 
     # Ordena por prioridade para otimizar rota de campo
     ordem = {"alta": 0, "media": 1, "baixa": 2, "grade": 3}
@@ -342,6 +355,38 @@ def gerar_mapa(
     return output_path
 
 
+
+# -- MASCARA DE POLIGONO -------------------------------------------------------
+
+def criar_mascara_poligono(geojson_geom, bbox, shape):
+    h, w = shape
+    lon_min, lat_min, lon_max, lat_max = bbox
+
+    def geo_para_pixel(lon, lat):
+        col = (lon - lon_min) / (lon_max - lon_min) * w
+        row = (lat_max - lat) / (lat_max - lat_min) * h
+        return col, row
+
+    def anel_para_mascara(anel):
+        pts_px = [geo_para_pixel(lon, lat) for lon, lat in anel]
+        path = MplPath(pts_px)
+        cols, rows = np.meshgrid(np.arange(w), np.arange(h))
+        pts = np.column_stack([cols.ravel(), rows.ravel()])
+        return path.contains_points(pts).reshape(h, w)
+
+    tipo = geojson_geom.get("type", "")
+    coords = geojson_geom.get("coordinates", [])
+    mascara = np.zeros((h, w), dtype=bool)
+
+    if tipo == "Polygon":
+        mascara |= anel_para_mascara(coords[0])
+    elif tipo == "MultiPolygon":
+        for poligono in coords:
+            mascara |= anel_para_mascara(poligono[0])
+
+    return mascara
+
+
 # ── ANÁLISE PRINCIPAL ─────────────────────────────────────────────────────────
 
 def analisar_fazenda(
@@ -352,6 +397,7 @@ def analisar_fazenda(
     fazenda_info: dict,
     cloud_mask: np.ndarray = None,
     data_imagem: str = None,
+    geometria: dict = None,
 ) -> dict:
     """
     Análise completa da fazenda.
@@ -375,7 +421,20 @@ def analisar_fazenda(
         for arr in [b4, b8, b11, b12]:
             arr[cloud_mask > 0.5] = np.nan
 
-    # ── Índices espectrais ──
+    # -- Mascara do poligono real da fazenda --
+    if geometria is not None and fazenda_info.get("bbox"):
+        h_arr, w_arr = b4.shape
+        mascara = criar_mascara_poligono(geometria, fazenda_info["bbox"], (h_arr, w_arr))
+        pixels_dentro = int(np.sum(mascara))
+        area_mapeada_ha = round(pixels_dentro * (RESOLUCAO_M ** 2) / 10_000, 1)
+        print(f"\n   Mascara aplicada: {pixels_dentro} pixels = {area_mapeada_ha} ha reais (CAR: {fazenda_info.get('area_ha','?')} ha)")
+        fora = ~mascara
+        for arr in [b4, b8, b11, b12]:
+            arr[fora] = np.nan
+    else:
+        area_mapeada_ha = fazenda_info.get("area_ha", 0)
+
+    # -- Indices espectrais --
     ndvi     = calcular_ndvi(b4, b8)
     ndwi     = calcular_ndwi(b8, b11)
     nbr      = calcular_nbr(b8, b12)

@@ -90,6 +90,7 @@ def buscar_geometrias_sicar(cod_ibge: str, estado: str) -> dict:
 
         geometrias[cod] = {
             "bbox":       bbox,
+            "geojson":    geom,   # geometria GeoJSON completa para máscara de polígono
             "area_ha":    float(props.get("area", 0)),
             "municipio":  props.get("municipio", ""),
             "uf":         props.get("uf", estado),
@@ -218,6 +219,7 @@ def rodar_pipeline(
 
     # ── Etapa 5: Buscar geometrias ────────────────────────────────────────────
     geometrias = buscar_geometrias_sicar(cod_ibge, estado)
+    # geometrias inclui 'bbox' e 'geojson' do WFS para máscara de polígono
 
     # ── Etapa 6: Rodar satellite.py para cada fazenda ─────────────────────────
     resultados_mrv = []
@@ -252,13 +254,16 @@ def rodar_pipeline(
                     fazenda_key=None, data_inicio=None, data_fim=None,
                     fazenda_override=fazenda_info,
                 )
+                geom = geo.get("geojson")
                 resultado = analisar_fazenda(
                     b4, b8, b11, b12, fazenda_info,
-                    cloud_mask=cloud, data_imagem=data_img
+                    cloud_mask=cloud, data_imagem=data_img,
+                    geometria=geom
                 )
             else:
                 b4, b8, b11, b12, _ = rodar_teste_local_com_info(fazenda_info)
-                resultado = analisar_fazenda(b4, b8, b11, b12, fazenda_info)
+                geom = geo.get("geojson")
+                resultado = analisar_fazenda(b4, b8, b11, b12, fazenda_info, geometria=geom)
 
             # O satellite.py já salva o JSON com nome resultado_sat_{cpa_id}.json
             # Apenas referencia o path correto para o resumo
