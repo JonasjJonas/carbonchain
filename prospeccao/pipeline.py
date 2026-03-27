@@ -170,6 +170,7 @@ def rodar_pipeline(
     usar_api: bool = False,
     output_dir: Path = None,
     csv_cache: Path = None,   # se fornecido, pula etapas 1-4 e usa CSV existente
+    periodo: str = "recente", # "recente" | "seco" (junho-agosto, ideal para Cerrado)
 ):
     estado = estado.upper()
     output_dir = output_dir or ROOT / "data" / "prospeccao"
@@ -252,7 +253,7 @@ def rodar_pipeline(
             if usar_api:
                 b4, b8, b11, b12, cloud, _, data_img = buscar_sentinel2_api(
                     fazenda_key=None, data_inicio=None, data_fim=None,
-                    fazenda_override=fazenda_info,
+                    fazenda_override=fazenda_info, periodo=periodo,
                 )
                 geom = geo.get("geojson")
                 resultado = analisar_fazenda(
@@ -368,6 +369,7 @@ Exemplos:
     parser.add_argument("--top",       default=10,  type=int,   help="Quantas fazendas PRIORIDADE_1 analisar (default: 10)")
     parser.add_argument("--api",       action="store_true",     help="Usar API Copernicus real (requer .env)")
     parser.add_argument("--csv",       default=None,            help="CSV de prospecção já gerado — pula SICAR + MapBiomas")
+    parser.add_argument("--periodo",   default="recente",       choices=["recente", "seco"], help="Período das imagens: recente (últimos 30 dias) ou seco (jun-ago, melhor para Cerrado)")
     parser.add_argument("--output",    default=None,            help="Pasta de output (default: data/prospeccao/)")
     args = parser.parse_args()
 
@@ -381,6 +383,7 @@ Exemplos:
         usar_api=args.api,
         output_dir=output_dir,
         csv_cache=Path(args.csv) if args.csv else None,
+        periodo=args.periodo,
     )
 
 

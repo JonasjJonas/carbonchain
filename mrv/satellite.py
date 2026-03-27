@@ -627,6 +627,7 @@ def buscar_sentinel2_api(
     data_inicio: str = None,
     data_fim: str = None,
     fazenda_override: dict = None,  # bbox dinâmico vindo do pipeline.py
+    periodo: str = "recente",       # "recente" = últimos 30 dias | "seco" = junho-agosto
 ) -> tuple:
     """
     Busca dados reais Sentinel-2 via Copernicus Data Space API.
@@ -674,10 +675,18 @@ def buscar_sentinel2_api(
     tamanho = bbox_to_dimensions(bbox, resolution=RESOLUCAO_M)
 
     if data_inicio is None:
-        # Padrão: último mês com baixa nebulosidade (período seco Cerrado = maio–setembro)
         hoje = datetime.now()
-        data_fim    = hoje.strftime("%Y-%m-%dT00:00:00Z")
-        data_inicio = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00Z")
+        if periodo == "seco":
+            # Período seco do Cerrado = junho-agosto
+            # Lavoura já colhida → NDVI baixo → distingue floresta de área agrícola
+            ano = hoje.year if hoje.month > 8 else hoje.year - 1
+            data_inicio = f"{ano}-06-01T00:00:00Z"
+            data_fim    = f"{ano}-08-31T00:00:00Z"
+            print(f"   📅 Período seco: {data_inicio[:10]} → {data_fim[:10]}")
+        else:
+            # Recente: últimos 30 dias
+            data_fim    = hoje.strftime("%Y-%m-%dT00:00:00Z")
+            data_inicio = (hoje - timedelta(days=30)).strftime("%Y-%m-%dT00:00:00Z")
 
     print(f"\n🌐 Buscando Sentinel-2 via API Copernicus...")
     print(f"   Fazenda:   {fazenda['nome']}")
