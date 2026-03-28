@@ -1,2 +1,53 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Ambientes virtuais
 venv/
+env/
+.venv/
+prospeccao/venv/
+
+# ── Dados gerados localmente ───────────────────────────────────────────────────
 data/
+*.csv
+*.tiff
+*.tif
+
+# ── Credenciais e variáveis de ambiente ───────────────────────────────────────
+.env
+*.env
+!.env.example
+
+# ── Node.js / Hardhat ─────────────────────────────────────────────────────────
+node_modules/
+token/node_modules/
+token/artifacts/
+token/cache/
+token/typechain-types/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Editores ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
