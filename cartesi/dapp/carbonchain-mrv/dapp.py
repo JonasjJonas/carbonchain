@@ -239,7 +239,7 @@ def montar_voucher_mint(resultado: dict) -> dict:
     ativos = {a["tipo"]: a for a in resultado["ativos"]}
 
     # Endereço do CCTFactory (a ser preenchido após deploy em mainnet)
-    CCT_FACTORY_ADDR = "0x0000000000000000000000000000000000000000"
+    CCT_FACTORY_ADDR = "0xfA4150eFd8a152a48B9332F68EA2589933FcBA1B"
 
     # ABI encode simplificado — versão completa usa eth_abi
     mint_data = {

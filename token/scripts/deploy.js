@@ -54,8 +54,15 @@ async function main() {
   // ── 4. Deploy CCTFactory ───────────────────────────────────────────────────
   // Na testnet/mainnet: substituir CARTESI_ROLLUP pelo endereço real do CartesiDApp
   // Na rede local: usa o deployer como placeholder para testes
-  const CARTESI_ROLLUP = process.env.CARTESI_ROLLUP_ADDR || deployer.address;
-  const TESOURARIA     = process.env.TESOURARIA_ADDR     || deployer.address;
+  // Na testnet usa o deployer como placeholder para Cartesi e Tesouraria
+  // Na mainnet substituir pelas variáveis de ambiente reais
+  const CARTESI_ROLLUP = (process.env.CARTESI_ROLLUP_ADDR && 
+    process.env.CARTESI_ROLLUP_ADDR !== "0x0000000000000000000000000000000000000000")
+    ? process.env.CARTESI_ROLLUP_ADDR : deployer.address;
+
+  const TESOURARIA = (process.env.TESOURARIA_ADDR && 
+    process.env.TESOURARIA_ADDR !== "0x0000000000000000000000000000000000000000")
+    ? process.env.TESOURARIA_ADDR : deployer.address;
 
   console.log("📦 Deployando CCTFactory...");
   console.log(`   Cartesi Rollup: ${CARTESI_ROLLUP}`);
