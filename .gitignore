@@ -33,6 +33,10 @@ token/artifacts/
 token/cache/
 token/typechain-types/
 
+# Exceção — endereços de deploy devem ser versionados
+!token/deployments/
+!token/deployments/*.json
+
 # ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store
 .AppleDouble
@@ -51,4 +55,3 @@ token/typechain-types/
 # ── Logs ──────────────────────────────────────────────────────────────────────
 *.log
 logs/
-token/.env.save
