@@ -152,6 +152,89 @@ def classificar_zona(ndvi: float) -> str:
     return "Água / sombra"
 
 
+# ── CLASSIFICAÇÃO TEMPORAL (ΔNDVI úmido vs. seco) ───────────────────────────
+
+# Thresholds calibrados para Cerrado sul de Goiás
+# Baseado em: lavoura anual (soja/milho) tem ΔNDVI 0.4-0.6,
+# pastagem manejada 0.2-0.35, Cerrado nativo 0.10-0.20, mata densa <0.10
+DELTA_NDVI_THRESHOLDS = {
+    "lavoura":          0.35,   # ΔNDVI > 0.35 → lavoura anual (alta confiança)
+    "zona_cinza":       0.20,   # 0.20-0.35 → safrinha ou pasto manejado
+    "cerrado_aberto":   0.10,   # 0.10-0.20 → cerrado aberto / pastagem nativa
+    # < 0.10 → reserva densa (mata/cerradão)
+}
+
+
+def classificar_zonas_temporal(
+    ndvi_umido: np.ndarray,
+    ndvi_seco: np.ndarray,
+    area_ha: float,
+    px_ha: float,
+    verbose: bool = True,
+) -> dict:
+    """
+    Classifica zonas usando ΔNDVI entre período úmido e seco.
+
+    Lógica:
+      ΔNDVI > 0.35  → Lavoura anual (solo exposto pós-colheita)
+      0.20 – 0.35   → Zona cinza (safrinha / pastagem manejada) → tratado como solo agrícola
+      0.10 – 0.20   → Cerrado aberto / pastagem nativa
+      < 0.10        → Reserva densa (mata ciliar / cerradão)
+
+    A zona cinza é tratada como solo agrícola por conservadorismo:
+    melhor subestimar reserva do que inflar REDD+.
+    """
+    delta = ndvi_umido - ndvi_seco
+
+    t_lav = DELTA_NDVI_THRESHOLDS["lavoura"]
+    t_zc  = DELTA_NDVI_THRESHOLDS["zona_cinza"]
+    t_ca  = DELTA_NDVI_THRESHOLDS["cerrado_aberto"]
+
+    valid = ~np.isnan(delta)
+
+    lavoura_px      = np.sum((delta > t_lav) & valid)
+    zona_cinza_px   = np.sum((delta > t_zc) & (delta <= t_lav) & valid)
+    cerrado_ab_px   = np.sum((delta > t_ca) & (delta <= t_zc) & valid)
+    reserva_px      = np.sum((delta <= t_ca) & valid)
+    # Pixels com NDVI úmido < 0 (água/sombra)
+    agua_px         = np.sum((ndvi_umido < 0.0) & valid)
+    # Solo exposto mesmo na chuva (NDVI úmido < 0.20)
+    solo_exp_px     = np.sum((ndvi_umido < 0.20) & (ndvi_umido >= 0.0) & valid)
+
+    zonas = {
+        "floresta_reserva_ha":   round(float(reserva_px) * px_ha, 1),
+        "lavoura_saudavel_ha":   round(float(lavoura_px) * px_ha, 1),
+        "zona_cinza_ha":         round(float(zona_cinza_px) * px_ha, 1),
+        "vegetacao_moderada_ha": round(float(cerrado_ab_px) * px_ha, 1),
+        "solo_exposto_ha":       round(float(solo_exp_px) * px_ha, 1),
+        "agua_sombra_ha":        round(float(agua_px) * px_ha, 1),
+    }
+
+    if verbose:
+        total = sum(zonas.values())
+        print(f"\n🗺️  Zonas (classificação temporal ΔNDVI):")
+        print(f"   {'ΔNDVI range':28s}  {'Zona':28s}  {'ha':>6s}  {'%':>5s}")
+        print(f"   {'─'*75}")
+        labels = [
+            ("floresta_reserva_ha",   f"Reserva densa (Δ<{t_ca})",   ),
+            ("vegetacao_moderada_ha", f"Cerrado aberto ({t_ca}-{t_zc})"),
+            ("zona_cinza_ha",         f"Zona cinza ({t_zc}-{t_lav}) → agrícola"),
+            ("lavoura_saudavel_ha",   f"Lavoura anual (Δ>{t_lav})" ),
+            ("solo_exposto_ha",       "Solo exposto (NDVI úmido <0.2)"),
+            ("agua_sombra_ha",        "Água / sombra"),
+        ]
+        for key, label in labels:
+            ha = zonas[key]
+            pct = (ha / total * 100) if total > 0 else 0
+            print(f"   {label:58s}: {ha:6.0f} ha  ({pct:4.1f}%)")
+
+        delta_medio = float(np.nanmean(delta))
+        delta_std   = float(np.nanstd(delta))
+        print(f"\n   ΔNDVI médio: {delta_medio:.3f} ± {delta_std:.3f}")
+
+    return zonas
+
+
 def estimar_soc_relativo(ndwi: np.ndarray, ndvi: np.ndarray) -> np.ndarray:
     """
     Estimativa relativa de SOC (Soil Organic Carbon) a partir de índices.
@@ -398,6 +481,7 @@ def analisar_fazenda(
     cloud_mask: np.ndarray = None,
     data_imagem: str = None,
     geometria: dict = None,
+    ndvi_seco: np.ndarray = None,
 ) -> dict:
     """
     Análise completa da fazenda.
@@ -467,23 +551,36 @@ def analisar_fazenda(
     total_px = np.sum(~np.isnan(ndvi))
     px_ha    = (RESOLUCAO_M ** 2) / 10_000  # ha por pixel
 
-    zonas = {
-        "floresta_reserva_ha":   round(float(np.sum(ndvi > 0.60)) * px_ha, 1),
-        "lavoura_saudavel_ha":   round(float(np.sum((ndvi >= 0.40) & (ndvi < 0.60))) * px_ha, 1),
-        "vegetacao_moderada_ha": round(float(np.sum((ndvi >= 0.20) & (ndvi < 0.40))) * px_ha, 1),
-        "solo_exposto_ha":       round(float(np.sum((ndvi >= 0.00) & (ndvi < 0.20))) * px_ha, 1),
-        "agua_sombra_ha":        round(float(np.sum(ndvi < 0.00)) * px_ha, 1),
-    }
-    total_mapeado = sum(zonas.values())
-
-    print(f"\n🗺️  Zonas (área estimada):")
-    for zona, ha in zonas.items():
-        pct = (ha / total_mapeado * 100) if total_mapeado > 0 else 0
-        print(f"   {zona.replace('_ha','').replace('_',' '):28s}: {ha:6.0f} ha  ({pct:.0f}%)")
+    if ndvi_seco is not None:
+        # ── Classificação temporal (ΔNDVI úmido vs. seco) ──
+        print(f"\n   ✓ Dados do período seco disponíveis — usando classificação temporal")
+        zonas = classificar_zonas_temporal(ndvi, ndvi_seco, area_ha, px_ha, verbose=True)
+    else:
+        # ── Fallback: classificação estática (imagem única) ──
+        print(f"\n   ⚠️  Sem dados do período seco — usando classificação estática (menos precisa)")
+        zonas = {
+            "floresta_reserva_ha":   round(float(np.sum(ndvi > 0.60)) * px_ha, 1),
+            "lavoura_saudavel_ha":   round(float(np.sum((ndvi >= 0.40) & (ndvi < 0.60))) * px_ha, 1),
+            "zona_cinza_ha":         0.0,
+            "vegetacao_moderada_ha": round(float(np.sum((ndvi >= 0.20) & (ndvi < 0.40))) * px_ha, 1),
+            "solo_exposto_ha":       round(float(np.sum((ndvi >= 0.00) & (ndvi < 0.20))) * px_ha, 1),
+            "agua_sombra_ha":        round(float(np.sum(ndvi < 0.00)) * px_ha, 1),
+        }
+        total_mapeado = sum(zonas.values())
+        print(f"\n🗺️  Zonas (classificação estática NDVI):")
+        for zona, ha in zonas.items():
+            pct = (ha / total_mapeado * 100) if total_mapeado > 0 else 0
+            print(f"   {zona.replace('_ha','').replace('_',' '):28s}: {ha:6.0f} ha  ({pct:.0f}%)")
 
     # ── Elegibilidade VM0042 ──
-    # Solo agrícola = lavoura + vegetação moderada + solo exposto
-    solo_agricola_ha = zonas["lavoura_saudavel_ha"] + zonas["vegetacao_moderada_ha"] + zonas["solo_exposto_ha"]
+    # Solo agrícola = lavoura + zona cinza + vegetação moderada + solo exposto
+    # Zona cinza tratada como agrícola por conservadorismo (não infla REDD+)
+    solo_agricola_ha = (
+        zonas["lavoura_saudavel_ha"]
+        + zonas.get("zona_cinza_ha", 0.0)
+        + zonas["vegetacao_moderada_ha"]
+        + zonas["solo_exposto_ha"]
+    )
     reserva_ha       = zonas["floresta_reserva_ha"]
     additionality_ok = ndvi_std > 0.10   # variabilidade indica potencial de melhoria
 
@@ -527,6 +624,7 @@ def analisar_fazenda(
             "bsi_medio":   round(bsi_medio, 4),
             "soc_proxy":   round(soc_medio, 4),
             "classificacao": classificar_zona(ndvi_medio),
+            "metodo_zonas": "temporal_delta_ndvi" if ndvi_seco is not None else "estatico_ndvi",
         },
         "zonas_ha":   zonas,
         "elegibilidade": {
@@ -562,62 +660,72 @@ def analisar_fazenda(
 def rodar_teste_local(fazenda_key: str = "itumbiara") -> tuple:
     """
     Simula imagem Sentinel-2 realista para fazenda no Cerrado.
-    Representa padrão típico: reserva ao norte, lavoura no centro,
-    solo exposto/pastagem ao sul — comum no sul de Goiás.
+    Retorna dados de período úmido E seco para classificação temporal.
 
-    Todas as 4 bandas (B04, B08, B11, B12) são simuladas.
+    Padrão típico sul de Goiás:
+      - Reserva (norte): NDVI estável ~0.70 úmido → ~0.55 seco (Δ≈0.15)
+      - Lavoura (centro): NDVI 0.50 úmido → 0.10 seco (Δ≈0.40, colhida)
+      - Pastagem degradada (sul): NDVI 0.15 úmido → 0.08 seco (Δ≈0.07)
     """
     fazenda = FAZENDAS.get(fazenda_key, FAZENDAS["itumbiara"])
     area_ha = fazenda["area_ha"]
-    # Dimensiona o array para cobrir a área real da fazenda
-    # lado = √(area_ha × 10.000m²/ha ÷ resolução²)
-    # Exemplo: 800ha → √(8.000.000 / 100) = 282 pixels → 795ha mapeados
     lado = int(np.sqrt(area_ha * 10_000 / RESOLUCAO_M ** 2))
-    lado = max(lado, 50)  # mínimo 50px
+    lado = max(lado, 50)
     h, w = lado, lado
 
-    print(f"\n🧪 Modo teste local — dados sintéticos Cerrado")
+    print(f"\n🧪 Modo teste local — dados sintéticos Cerrado (úmido + seco)")
     print(f"   Fazenda: {fazenda['nome']}")
     print(f"   Grid:    {h}×{w} pixels = {h*w*RESOLUCAO_M**2/10000:.0f} ha mapeados\n")
 
     np.random.seed(42)
-
-    # ── Padrão base NDVI por zona ──
-    ndvi_base = np.zeros((h, w))
     n30 = h // 3
 
-    # Norte — reserva/floresta nativa Cerrado (NDVI 0.6–0.82)
-    ndvi_base[:n30, :]    = np.random.uniform(0.62, 0.82, (n30, w))
-    # Centro — lavoura soja/milho (NDVI 0.38–0.62)
-    ndvi_base[n30:2*n30, :] = np.random.uniform(0.38, 0.62, (n30, w))
-    # Sul — pastagem degradada/solo exposto (NDVI 0.04–0.26)
-    ndvi_base[2*n30:, :]  = np.random.uniform(0.04, 0.26, (h - 2*n30, w))
+    # ══════════════════════════════════════════════════════════════════════════
+    # PERÍODO ÚMIDO (jan-mar) — lavoura no pico vegetativo
+    # ══════════════════════════════════════════════════════════════════════════
+    ndvi_umido = np.zeros((h, w))
+    # Norte — reserva/floresta nativa (NDVI 0.62–0.82)
+    ndvi_umido[:n30, :]       = np.random.uniform(0.62, 0.82, (n30, w))
+    # Centro — lavoura soja/milho no pico (NDVI 0.38–0.62)
+    ndvi_umido[n30:2*n30, :]  = np.random.uniform(0.38, 0.62, (n30, w))
+    # Sul — pastagem degradada (NDVI 0.04–0.26)
+    ndvi_umido[2*n30:, :]     = np.random.uniform(0.04, 0.26, (h - 2*n30, w))
 
-    # Suaviza e adiciona textura
-    ndvi_base = gaussian_filter(ndvi_base, sigma=4)
-    ndvi_base += np.random.normal(0, 0.025, (h, w))
-    ndvi_base  = np.clip(ndvi_base, -0.05, 0.88)
+    ndvi_umido = gaussian_filter(ndvi_umido, sigma=4)
+    ndvi_umido += np.random.normal(0, 0.025, (h, w))
+    ndvi_umido = np.clip(ndvi_umido, -0.05, 0.88)
 
-    # ── B08 (NIR) ──
-    b8 = 0.25 + 0.30 * ndvi_base + np.random.normal(0, 0.015, (h, w))
+    # Bandas derivadas do NDVI úmido
+    b8 = 0.25 + 0.30 * ndvi_umido + np.random.normal(0, 0.015, (h, w))
     b8 = np.clip(b8, 0.05, 0.75)
 
-    # ── B04 (Red) — derivado do NDVI ──
-    b4 = b8 * (1 - ndvi_base) / (1 + ndvi_base + 1e-10)
+    b4 = b8 * (1 - ndvi_umido) / (1 + ndvi_umido + 1e-10)
     b4 = np.clip(b4 + np.random.normal(0, 0.01, (h, w)), 0.01, 0.50)
 
-    # ── B11 (SWIR1) — umidade do solo ──
-    # Reserva: alta umidade (baixo SWIR), pastagem: baixa umidade (alto SWIR)
-    b11 = 0.35 - 0.25 * ndvi_base + np.random.normal(0, 0.02, (h, w))
+    b11 = 0.35 - 0.25 * ndvi_umido + np.random.normal(0, 0.02, (h, w))
     b11 = gaussian_filter(b11, sigma=2)
     b11 = np.clip(b11, 0.05, 0.55)
 
-    # ── B12 (SWIR2) — discriminação de cobertura ──
-    b12 = 0.28 - 0.18 * ndvi_base + np.random.normal(0, 0.018, (h, w))
+    b12 = 0.28 - 0.18 * ndvi_umido + np.random.normal(0, 0.018, (h, w))
     b12 = gaussian_filter(b12, sigma=2)
     b12 = np.clip(b12, 0.03, 0.48)
 
-    return b4, b8, b11, b12, fazenda
+    # ══════════════════════════════════════════════════════════════════════════
+    # PERÍODO SECO (jun-ago) — lavoura colhida, reserva estável
+    # ══════════════════════════════════════════════════════════════════════════
+    ndvi_seco = np.zeros((h, w))
+    # Norte — reserva: perde pouca folha (NDVI 0.48–0.68, Δ≈0.12-0.15)
+    ndvi_seco[:n30, :]       = np.random.uniform(0.48, 0.68, (n30, w))
+    # Centro — lavoura colhida: solo quase exposto (NDVI 0.05–0.20, Δ≈0.35-0.50)
+    ndvi_seco[n30:2*n30, :]  = np.random.uniform(0.05, 0.20, (n30, w))
+    # Sul — pastagem degradada: quase igual (NDVI 0.02–0.18, Δ≈0.03-0.08)
+    ndvi_seco[2*n30:, :]     = np.random.uniform(0.02, 0.18, (h - 2*n30, w))
+
+    ndvi_seco = gaussian_filter(ndvi_seco, sigma=4)
+    ndvi_seco += np.random.normal(0, 0.025, (h, w))
+    ndvi_seco = np.clip(ndvi_seco, -0.05, 0.80)
+
+    return b4, b8, b11, b12, ndvi_seco, fazenda
 
 
 # ── API COPERNICUS ────────────────────────────────────────────────────────────
@@ -758,8 +866,8 @@ def main():
         print(f"\n🗂️  Analisando todas as {len(FAZENDAS)} fazendas cadastradas...\n")
         resultados = {}
         for key in FAZENDAS:
-            b4, b8, b11, b12, fazenda = rodar_teste_local(key)
-            resultados[key] = analisar_fazenda(b4, b8, b11, b12, fazenda)
+            b4, b8, b11, b12, ndvi_seco, fazenda = rodar_teste_local(key)
+            resultados[key] = analisar_fazenda(b4, b8, b11, b12, fazenda, ndvi_seco=ndvi_seco)
         # Salva resumo consolidado
         resumo_fn = DATA_DIR / "resumo_todas_fazendas.json"
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -783,16 +891,33 @@ def main():
                 data_inicio=args.start,
                 data_fim=args.end,
             )
+            # Tenta buscar dados do período seco para classificação temporal
+            ndvi_seco_api = None
+            try:
+                print("\n   📅 Buscando dados do período seco para classificação temporal...")
+                b4s, b8s, _, _, cloud_s, _, _ = buscar_sentinel2_api(
+                    fazenda_key=args.farm,
+                    periodo="seco",
+                )
+                ndvi_seco_api = calcular_ndvi(b4s, b8s)
+                if cloud_s is not None:
+                    ndvi_seco_api[cloud_s > 0.5] = np.nan
+                print("   ✓ Dados secos obtidos — classificação temporal ativada")
+            except Exception as e:
+                print(f"   ⚠️  Não foi possível obter dados secos: {e}")
+                print("   → Usando classificação estática como fallback")
+
             analisar_fazenda(b4, b8, b11, b12, fazenda,
-                             cloud_mask=cloud, data_imagem=data_img)
+                             cloud_mask=cloud, data_imagem=data_img,
+                             ndvi_seco=ndvi_seco_api)
         except (ValueError, ImportError) as e:
             print(f"\n❌ {e}")
             print("   Rodando em modo local como fallback...\n")
-            b4, b8, b11, b12, fazenda = rodar_teste_local(args.farm)
-            analisar_fazenda(b4, b8, b11, b12, fazenda)
+            b4, b8, b11, b12, ndvi_seco, fazenda = rodar_teste_local(args.farm)
+            analisar_fazenda(b4, b8, b11, b12, fazenda, ndvi_seco=ndvi_seco)
     else:
-        b4, b8, b11, b12, fazenda = rodar_teste_local(args.farm)
-        analisar_fazenda(b4, b8, b11, b12, fazenda)
+        b4, b8, b11, b12, ndvi_seco, fazenda = rodar_teste_local(args.farm)
+        analisar_fazenda(b4, b8, b11, b12, fazenda, ndvi_seco=ndvi_seco)
 
 
 if __name__ == "__main__":

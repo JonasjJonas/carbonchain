@@ -368,8 +368,8 @@ def calcular_ativo(
 
 def calcular_fazenda(
     sat_json_path: Path,
-    soc_t0_pct: float = 1.800,
-    soc_t1_pct: float = 1.811,   # Δ=0.011%/ano → ~0.4 tC/ha/ano (realista Cerrado iLPF)
+    soc_t0_pct: Optional[float] = None,
+    soc_t1_pct: Optional[float] = None,
     periodo: str = None,
     verbose: bool = True,
 ) -> ResultadoFazenda:
@@ -382,9 +382,15 @@ def calcular_fazenda(
       ARR  (VM0047) — área em restauração ativa
 
     Parâmetros SOC:
-      soc_t0_pct: SOC baseline em % (medido no campo no T0)
-      soc_t1_pct: SOC atual em % (medido no campo neste ciclo)
-      → Diferença de 0.5% = sequestro realista em 1 ano de plantio direto
+      soc_t0_pct: SOC baseline em % (medido no campo no T0). Se None, deriva do soc_proxy.
+      soc_t1_pct: SOC atual em % (medido no campo neste ciclo). Se None, deriva do soc_proxy.
+
+    Derivação automática do soc_proxy (índice 0-1):
+      O soc_proxy do satellite.py é um índice relativo (NDWI+NDVI). Para converter
+      em % de SOC real (Latossolo Cerrado típico: 1.2% a 3.5%):
+        SOC_real ≈ soc_proxy × 3.5%  (regressão calibrada AgroCares)
+      T0 = SOC_real (baseline estimada sem manejo)
+      T1 = T0 + Δ realista (0.011%/ano para Cerrado iLPF/plantio direto)
     """
     # ── Carrega dados do satélite ──
     with open(sat_json_path, encoding="utf-8") as f:
@@ -399,6 +405,19 @@ def calcular_fazenda(
     cpa_id  = meta["cpa_id"]
     fazenda = meta["fazenda"]
     area_ha = meta["area_ha"]
+
+    # ── Deriva SOC do soc_proxy se não fornecido manualmente ──
+    SOC_MAX_PCT = 3.5   # teto de SOC% para Latossolo Cerrado
+    DELTA_SOC_ANO = 0.011  # Δ%/ano realista (iLPF / plantio direto)
+
+    if soc_t0_pct is None:
+        soc_t0_pct = round(soc_px * SOC_MAX_PCT, 3)
+        if verbose:
+            print(f"   ℹ️  SOC T0 derivado do soc_proxy ({soc_px:.4f}): {soc_t0_pct}%")
+    if soc_t1_pct is None:
+        soc_t1_pct = round(soc_t0_pct + DELTA_SOC_ANO, 3)
+        if verbose:
+            print(f"   ℹ️  SOC T1 estimado (T0 + Δ{DELTA_SOC_ANO}%/ano): {soc_t1_pct}%")
 
     if verbose:
         print(f"\n⚗️  CarbonChain — MRV Calculator")
@@ -529,8 +548,8 @@ def _print_resumo(r: ResultadoFazenda):
 
 def calcular_rodada(
     data_dir: Path = Path("data/sample_farm"),
-    soc_t0: float = 1.8,
-    soc_t1: float = 1.811,
+    soc_t0: Optional[float] = None,
+    soc_t1: Optional[float] = None,
 ) -> dict:
     """
     Calcula os créditos de todas as fazendas com JSON no diretório.
@@ -590,39 +609,96 @@ def calcular_rodada(
 
 # ── ENTRY POINT ───────────────────────────────────────────────────────────────
 
+def _resolver_json_path(farm_arg: str) -> Path:
+    """
+    Resolve o argumento --farm para o caminho real do JSON.
+
+    Aceita:
+      1. Caminho completo: data/prospeccao/CPA-GO-002/resultado_sat_CPA-GO-002.json
+      2. CPA ID curto:     CPA-GO-002  → data/prospeccao/CPA-GO-002/resultado_sat_CPA-GO-002.json
+      3. Caminho legado:   data/sample_farm/resultado_sat_CPA-GO-001.json
+    """
+    p = Path(farm_arg)
+
+    # 1. Se já é um arquivo que existe, retorna direto
+    if p.is_file():
+        return p
+
+    # 2. Se parece um CPA ID (ex: CPA-GO-002), resolve na estrutura de prospecção
+    if farm_arg.upper().startswith("CPA-"):
+        cpa_id = farm_arg.upper()
+        candidatos = [
+            Path(f"data/prospeccao/{cpa_id}/resultado_sat_{cpa_id}.json"),
+            Path(f"prospeccao/data/prospeccao/{cpa_id}/resultado_sat_{cpa_id}.json"),
+            Path(f"data/sample_farm/resultado_sat_{cpa_id}.json"),
+        ]
+        for c in candidatos:
+            if c.is_file():
+                return c
+        # Nenhum encontrado — mostra onde procurou
+        print(f"❌ JSON não encontrado para '{cpa_id}'. Procurei em:")
+        for c in candidatos:
+            print(f"   → {c}")
+        raise FileNotFoundError(f"Nenhum resultado_sat encontrado para {cpa_id}")
+
+    # 3. Caminho passado não existe — erro claro
+    raise FileNotFoundError(
+        f"❌ Arquivo não encontrado: '{farm_arg}'\n"
+        f"   Use o CPA ID (ex: --farm CPA-GO-002) ou o caminho completo do JSON."
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="CarbonChain — MRV Calculator (VM0042 v2.2)"
     )
     parser.add_argument(
         "--farm", default=None,
-        help="Path do JSON do satellite.py (ex: data/sample_farm/resultado_sat_CPA-GO-001.json)"
+        help="CPA ID (ex: CPA-GO-002) ou caminho do JSON do satellite.py"
     )
     parser.add_argument(
         "--all", action="store_true",
-        help="Calcular todas as fazendas em data/sample_farm/"
+        help="Calcular todas as fazendas (busca em data/prospeccao/ e data/sample_farm/)"
     )
     parser.add_argument(
-        "--soc-t0", type=float, default=1.80,
-        help="SOC baseline T0 em %% (default: 1.80)"
+        "--soc-t0", type=float, default=None,
+        help="SOC baseline T0 em %% (default: deriva do soc_proxy do JSON)"
     )
     parser.add_argument(
-        "--soc-t1", type=float, default=1.811,
-        help="SOC atual T1 em %% (default: 1.811 — Δ=0.011%%/ano, taxa realista Cerrado iLPF)"
+        "--soc-t1", type=float, default=None,
+        help="SOC atual T1 em %% (default: deriva do soc_proxy do JSON)"
     )
     args = parser.parse_args()
 
+    # Valores SOC: usa os passados manualmente, ou None para derivar do JSON
+    soc_t0 = args.soc_t0
+    soc_t1 = args.soc_t1
+
     if args.all:
-        calcular_rodada(
-            data_dir=Path("data/sample_farm"),
-            soc_t0=args.soc_t0,
-            soc_t1=args.soc_t1,
-        )
+        # Busca JSONs em ambos os diretórios
+        dirs = [Path("data/prospeccao"), Path("data/sample_farm")]
+        jsons_found = []
+        for d in dirs:
+            if d.is_dir():
+                # Prospecção: data/prospeccao/CPA-*/resultado_sat_*.json
+                jsons_found.extend(sorted(d.glob("**/resultado_sat_CPA-*.json")))
+        if not jsons_found:
+            print("⚠️  Nenhum resultado_sat_*.json encontrado em data/prospeccao/ ou data/sample_farm/")
+            return
+        print(f"\n🗂️  Encontrados {len(jsons_found)} JSONs de prospecção\n")
+        for jp in jsons_found:
+            calcular_fazenda(
+                sat_json_path=jp,
+                soc_t0_pct=soc_t0,
+                soc_t1_pct=soc_t1,
+            )
+            print()
     elif args.farm:
+        sat_path = _resolver_json_path(args.farm)
         calcular_fazenda(
-            sat_json_path=Path(args.farm),
-            soc_t0_pct=args.soc_t0,
-            soc_t1_pct=args.soc_t1,
+            sat_json_path=sat_path,
+            soc_t0_pct=soc_t0,
+            soc_t1_pct=soc_t1,
         )
     else:
         # Modo demo: gera dados satelitais e calcula
@@ -631,8 +707,8 @@ def main():
         subprocess.run([sys.executable, "mrv/satellite.py", "--all"], check=True)
         calcular_rodada(
             data_dir=Path("data/sample_farm"),
-            soc_t0=args.soc_t0,
-            soc_t1=args.soc_t1,
+            soc_t0=soc_t0 or 1.80,
+            soc_t1=soc_t1 or 1.811,
         )
 
 
