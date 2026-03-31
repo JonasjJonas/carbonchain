@@ -22,7 +22,7 @@ O `prospeccao/pipeline.py` gera os JSONs de satélite para cada fazenda. Rode-o 
 
 ```bash
 cd prospeccao
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 10 --api --periodo seco
+python3 pipeline.py --municipio "Itumbiara" --estado GO --api 
 ```
 
 Ao final, cada fazenda terá um JSON em `data/prospeccao/{CPA_ID}/resultado_sat_{CPA_ID}.json`.
