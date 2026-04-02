@@ -1,6 +1,6 @@
-# CarbonChain — Pipeline de Prospecção e MRV
+# CarbonChain — Prospecção (prospeccao/)
 
-Pipeline completo de entrada de fazendas no CarbonChain: da identificação de candidatos via SICAR até a análise de satélite com dados reais do Sentinel-2.
+Pipeline de entrada de fazendas no CarbonChain: da identificação de candidatos via SICAR até a análise de satélite com dados reais do Sentinel-2.
 
 ---
 
@@ -13,13 +13,40 @@ Pipeline completo de entrada de fazendas no CarbonChain: da identificação de c
 
 ---
 
-## Uso rápido
+## Setup
+
+```bash
+cd ~/carbonchain/prospeccao
+python3 -m venv venv
+source venv/bin/activate
+pip install requests pandas tqdm numpy matplotlib scipy python-dotenv sentinelhub
+```
+
+### Credenciais Copernicus (obrigatório para dados reais)
+
+1. Crie conta gratuita em [dataspace.copernicus.eu](https://dataspace.copernicus.eu)
+2. Vá em **User Settings → OAuth Clients → Create** (Never expire)
+3. Adicione ao `.env` na raiz do repositório:
+
+```
+SH_CLIENT_ID=seu_client_id
+SH_CLIENT_SECRET=seu_client_secret
+```
+
+---
+
+## Uso
+
+Sempre ative o venv antes de rodar:
+
+```bash
+cd ~/carbonchain/prospeccao
+source venv/bin/activate
+```
 
 ### Só prospecção (ranking de fazendas, sem satélite)
 
 ```bash
-cd prospeccao
-
 python3 prospectar.py --municipio "Itumbiara" --estado GO
 python3 prospectar.py --municipio "Rio Verde" --estado GO --area-min 500
 python3 prospectar.py --municipio "Sorriso" --estado MT --area-min 1000
@@ -27,11 +54,9 @@ python3 prospectar.py --municipio "Sorriso" --estado MT --area-min 1000
 
 Gera um CSV rankeado com todas as fazendas do município.
 
-### Pipeline completo (prospecção + satélite + mapa)
+### Pipeline completo (prospecção + satélite)
 
 ```bash
-cd prospeccao
-
 # Primeira rodada — roda SICAR + MapBiomas + Sentinel-2
 python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api
 
@@ -42,64 +67,9 @@ python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api \
 
 O pipeline busca automaticamente duas imagens Sentinel-2 (úmido + seco) para cada fazenda e faz a classificação temporal de zonas.
 
-### Depois: calcular créditos
+Ao final, cada fazenda terá seus resultados em `data/prospeccao/{CPA_ID}/`.
 
-```bash
-cd ~/carbonchain
-
-# Uma fazenda
-python mrv/mrv_calculator.py --farm CPA-GO-001
-
-# Todas
-python mrv/mrv_calculator.py --all
-```
-
-Ver `mrv/README.md` para mais opções.
-
----
-
-## Fluxo completo
-
-```
-prospectar.py                    pipeline.py
-─────────────                    ───────────
-API IBGE           →   Resolve código do município
-WFS SICAR          →   Busca imóveis rurais com CAR
-Filtro área        →   Remove fazendas < área mínima
-API MapBiomas      →   Consulta uso do solo 2022-2024
-Ranking            →   Classifica por % agrícola (VM0047)
-                   →   Seleciona top N (PRIORIDADE_1)
-                   →   Busca geometrias (polígono) no SICAR
-                   ↓
-              mrv/satellite.py
-                   →   Busca 2 imagens Sentinel-2 (úmido + seco)
-                   →   Aplica máscara do polígono real
-                   →   Classifica zonas por ΔNDVI temporal
-                   →   Normaliza áreas para o CAR
-                   →   Gera mapa 4 painéis PNG + JSON
-                   →   Salva em data/prospeccao/{CPA_ID}/
-```
-
----
-
-## Instalação
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install requests pandas tqdm numpy matplotlib scipy python-dotenv sentinelhub
-```
-
-### Credenciais Copernicus (obrigatório para `--api`)
-
-1. Crie conta gratuita em [dataspace.copernicus.eu](https://dataspace.copernicus.eu)
-2. Vá em **User Settings → OAuth Clients → Create** (Never expire)
-3. Adicione ao `.env` na raiz do repositório:
-
-```
-SH_CLIENT_ID=seu_client_id
-SH_CLIENT_SECRET=seu_client_secret
-```
+> Para calcular os créditos de carbono (VCUs) a partir dos resultados, veja `mrv/README.md`.
 
 ---
 
@@ -128,20 +98,36 @@ SH_CLIENT_SECRET=seu_client_secret
 
 ---
 
-## Classificação temporal (como funciona)
+## Fluxo
 
-O pipeline busca automaticamente **duas imagens** Sentinel-2 para cada fazenda: período úmido (jan-mar) e período seco (jun-ago). A diferença de NDVI entre elas revela o uso real do solo:
-
-- Lavoura: NDVI alto na chuva → baixo na seca (colhida) → **ΔNDVI > 0.35**
-- Reserva: NDVI alto na chuva → ainda alto na seca (perene) → **ΔNDVI < 0.10**
-
-Isso resolve o problema de lavoura em estágio vegetativo ser confundida com floresta no período chuvoso.
+```
+prospectar.py                    pipeline.py
+─────────────                    ───────────
+API IBGE           →   Resolve código do município
+WFS SICAR          →   Busca imóveis rurais com CAR
+Filtro área        →   Remove fazendas < área mínima
+API MapBiomas      →   Consulta uso do solo 2022-2024
+Ranking            →   Classifica por % agrícola (VM0047)
+                   →   Seleciona top N (PRIORIDADE_1)
+                   →   Busca geometrias (polígono) no SICAR
+                   ↓
+              mrv/satellite.py
+                   →   Busca 2 imagens Sentinel-2 (úmido + seco)
+                   →   Aplica máscara do polígono real
+                   →   Classifica zonas por ΔNDVI temporal
+                   →   Normaliza áreas para o CAR
+                   →   Gera mapa 4 painéis PNG + JSON
+                   →   Salva em data/prospeccao/{CPA_ID}/
+```
 
 ---
 
-## Máscara de polígono
+## Classificação temporal
 
-O Sentinel-2 retorna um retângulo (bbox) maior que a fazenda. O pipeline aplica o polígono real do CAR como máscara — pixels fora da propriedade são descartados. As áreas são normalizadas proporcionalmente para bater com a área declarada no CAR.
+O pipeline busca **duas imagens** Sentinel-2 para cada fazenda: período úmido (jan-mar) e período seco (jun-ago). A diferença de NDVI entre elas revela o uso real do solo:
+
+- Lavoura: NDVI alto na chuva → baixo na seca (colhida) → **ΔNDVI > 0.35**
+- Reserva: NDVI alto na chuva → ainda alto na seca (perene) → **ΔNDVI < 0.10**
 
 ---
 
@@ -161,33 +147,10 @@ O Sentinel-2 retorna um retângulo (bbox) maior que a fazenda. O pipeline aplica
 
 ```
 data/prospeccao/
-├── itumbiara_go_vm0047.csv              ← cache da prospecção (todas as fazendas)
-├── itumbiara_go_mrv_resumo.json         ← resumo consolidado do MRV
+├── itumbiara_go_vm0047.csv              ← cache da prospecção
+├── itumbiara_go_mrv_resumo.json         ← resumo consolidado
 ├── CPA-GO-001/
-│   ├── mapa_ndvi_CPA-GO-001.png        ← 4 painéis: NDVI úmido, seco, zonas, pontos
-│   ├── resultado_sat_CPA-GO-001.json   ← dados MRV para mrv_calculator.py
-│   └── resultado_mrv_CPA-GO-001.json   ← VCUs por ativo → CCTFactory.sol
+│   ├── mapa_ndvi_CPA-GO-001.png        ← mapa 4 painéis
+│   └── resultado_sat_CPA-GO-001.json   ← dados para mrv_calculator.py
 └── ...
-```
-
-> A pasta `data/` não é versionada — cada rodada gera os outputs localmente.
-
----
-
-## Posição no repositório
-
-```
-carbonchain/
-├── mrv/
-│   ├── satellite.py        ← análise de satélite (chamado pelo pipeline)
-│   ├── nir_model.py
-│   └── mrv_calculator.py
-├── prospeccao/
-│   ├── prospectar.py       ← pré-qualificação SICAR + MapBiomas
-│   ├── pipeline.py         ← integração completa
-│   └── README.md           ← este arquivo
-├── cartesi/
-├── token/
-└── data/                   ← outputs gerados (não versionado)
-    └── prospeccao/
 ```

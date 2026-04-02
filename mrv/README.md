@@ -14,119 +14,92 @@ Pipeline de Monitoramento, Relatório e Verificação (MRV) por satélite e sens
 
 ---
 
-## Uso rápido (3 passos)
+## Pré-requisito
 
-Todos os comandos a partir de `~/carbonchain`:
-
-### Passo 1 — Prospecção + Satélite (pipeline completo)
-
-```bash
-cd prospeccao
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api
-```
-
-Isso roda tudo: SICAR → MapBiomas → ranking → Sentinel-2 (úmido + seco) → classificação temporal → JSON + mapa.
-
-Se já tiver o CSV de prospecção de uma rodada anterior:
-
-```bash
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api \
-  --csv ../data/prospeccao/itumbiara_go_vm0047.csv
-```
-
-### Passo 2 — Calcular créditos de carbono
-
-```bash
-cd ~/carbonchain
-
-# Uma fazenda (pelo CPA ID)
-python mrv/mrv_calculator.py --farm CPA-GO-001
-
-# Todas as fazendas de uma vez
-python mrv/mrv_calculator.py --all
-```
-
-### Passo 3 — Verificar resultados
-
-```
-data/prospeccao/CPA-GO-001/
-├── mapa_ndvi_CPA-GO-001.png         ← 4 painéis: NDVI úmido, NDVI seco, zonas ΔNDVI, pontos NIR
-├── resultado_sat_CPA-GO-001.json    ← dados satellite.py
-└── resultado_mrv_CPA-GO-001.json    ← VCUs por ativo → CCTFactory.sol (mint)
-```
+O `prospeccao/pipeline.py` gera os JSONs de satélite para cada fazenda. Rode-o primeiro (ver `prospeccao/README.md`).
 
 ---
 
-## Opções avançadas
+## Uso
 
-### mrv_calculator.py
+Ative o venv e volte para a raiz do projeto:
 
 ```bash
-# Caminho completo do JSON (em vez de CPA ID)
-python mrv/mrv_calculator.py --farm data/prospeccao/CPA-GO-002/resultado_sat_CPA-GO-002.json
+cd ~/carbonchain
+source prospeccao/venv/bin/activate
+```
 
-# Override manual de SOC (se tiver dados NIR de campo)
+### Calcular créditos de uma fazenda
+
+```bash
+python mrv/mrv_calculator.py --farm CPA-GO-001
+```
+
+Aceita tanto o CPA ID (resolve o JSON automaticamente) quanto o caminho completo:
+
+```bash
+python mrv/mrv_calculator.py --farm data/prospeccao/CPA-GO-002/resultado_sat_CPA-GO-002.json
+```
+
+### Calcular todas as fazendas de uma vez
+
+```bash
+python mrv/mrv_calculator.py --all
+```
+
+Busca JSONs em `data/prospeccao/` e `data/sample_farm/`.
+
+### Override manual de SOC (com dados NIR de campo)
+
+```bash
 python mrv/mrv_calculator.py --farm CPA-GO-001 --soc-t0 2.1 --soc-t1 2.12
 ```
 
 Sem `--soc-t0`/`--soc-t1`, o SOC é derivado automaticamente do `soc_proxy` do JSON.
 
-### satellite.py avulso (sem prospecção, dados sintéticos)
-
-```bash
-python mrv/satellite.py --farm itumbiara
-python mrv/satellite.py --all
-```
-
 ---
 
-## Fluxo interno
+## Fluxo
 
 ```
-prospeccao/pipeline.py
-  └→ mrv/satellite.py
-       → busca 2 imagens Sentinel-2 (úmido + seco) via buscar_sentinel2_bitemporal()
-       → aplica máscara do polígono real (SICAR)
-       → calcula NDVI, NDWI, SOC proxy, BSI, NBR
-       → classifica zonas por ΔNDVI temporal
-       → normaliza áreas para bater com o CAR
-       → gera mapa 4 painéis PNG + resultado_sat_{CPA_ID}.json
-
+resultado_sat_{CPA_ID}.json        (gerado pelo prospeccao/pipeline.py)
+  ↓
 mrv/mrv_calculator.py
-  → lê resultado_sat_{CPA_ID}.json
+  → lê o JSON
   → deriva SOC do soc_proxy (ou aceita valores manuais)
-  → aplica VM0042 (solo), VM0015 (REDD+), VM0047 (ARR)
+  → calcula 3 ativos:
+      SOIL (VM0042) — solo agrícola em transição regenerativa
+      REDD (VM0015) — Reserva Legal com vegetação nativa preservada
+      ARR  (VM0047) — área em restauração ativa
   → aplica incerteza 20% + buffer 15% + leakage
   → gera resultado_mrv_{CPA_ID}.json → CCTFactory.sol (mint)
 ```
 
 ---
 
-## Classificação temporal de zonas
+## Outputs
 
-O `satellite.py` busca automaticamente duas imagens Sentinel-2 (úmido + seco) e usa o ΔNDVI para separar lavoura de reserva — resolvendo a ambiguidade de NDVI alto durante a safra.
-
-| ΔNDVI | Classificação | Destino MRV |
-|---|---|---|
-| > 0.35 | Lavoura anual (solo exposto pós-colheita) | SOIL (VM0042) |
-| 0.20–0.35 | Zona cinza (safrinha / pasto manejado) | SOIL (conservadorismo) |
-| 0.10–0.20 | Cerrado aberto / pastagem nativa | Vegetação moderada |
-| < 0.10 | Reserva densa (mata / cerradão) | REDD (VM0015) |
-
-A zona cinza é tratada como solo agrícola por conservadorismo — melhor subestimar reserva do que inflar REDD+.
-
-As áreas são normalizadas proporcionalmente para bater com a área declarada no CAR.
+```
+data/prospeccao/{CPA_ID}/
+├── mapa_ndvi_{CPA_ID}.png         ← mapa 4 painéis (gerado pelo satellite.py)
+├── resultado_sat_{CPA_ID}.json    ← input do mrv_calculator.py
+└── resultado_mrv_{CPA_ID}.json    ← VCUs por ativo → CCTFactory.sol (mint)
+```
 
 ---
 
-## Mapa de saída (4 painéis)
+## Classificação temporal de zonas
 
-| Painel | O que mostra |
-|---|---|
-| NDVI — Período Úmido | Imagem Sentinel-2 jan-mar (lavoura no pico vegetativo) |
-| NDVI — Período Seco | Imagem Sentinel-2 jun-ago (lavoura colhida, reserva estável) |
-| Classificação Temporal | Mapa categórico de zonas por ΔNDVI |
-| Pontos de Amostragem NIR | Distribuição dos pontos para coleta em campo |
+O `satellite.py` (chamado pelo pipeline) busca duas imagens Sentinel-2 (úmido + seco) e usa o ΔNDVI para classificar o uso do solo:
+
+| ΔNDVI | Classificação | Destino MRV |
+|---|---|---|
+| > 0.35 | Lavoura anual | SOIL (VM0042) |
+| 0.20–0.35 | Zona cinza (safrinha / pasto) | SOIL (conservadorismo) |
+| 0.10–0.20 | Cerrado aberto | Vegetação moderada |
+| < 0.10 | Reserva densa | REDD (VM0015) |
+
+As áreas são normalizadas proporcionalmente para bater com a área declarada no CAR.
 
 ---
 
