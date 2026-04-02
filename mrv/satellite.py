@@ -342,16 +342,19 @@ def gerar_mapa(
     pontos: list[dict],
     fazenda_info: dict,
     output_path: Path,
+    ndvi_seco: np.ndarray = None,
 ) -> Path:
     """
-    Gera painel visual de 3 mapas:
-      1. NDVI — cobertura vegetal
-      2. NDWI/SOC proxy — umidade e matéria orgânica do solo
-      3. Pontos de amostragem priorizados por SOC
+    Gera painel visual de mapas:
+      Com dados temporais (4 painéis):
+        1. NDVI úmido (período recente)
+        2. NDVI seco (jun-ago)
+        3. ΔNDVI — classificação de zonas por cor
+        4. Pontos de amostragem NIR
+      Sem dados temporais (3 painéis — fallback):
+        1. NDVI, 2. SOC Proxy, 3. Pontos NIR
     """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    fig, axes = plt.subplots(1, 3, figsize=(21, 7))
-    fig.patch.set_facecolor('#09150C')
 
     # Colormaps
     cmap_ndvi = mcolors.LinearSegmentedColormap.from_list(
@@ -360,48 +363,151 @@ def gerar_mapa(
     cmap_soc = mcolors.LinearSegmentedColormap.from_list(
         "soc", ["#F0E6CC", "#C4983A", "#8B5E15", "#4A3010", "#1A0A00"], N=256
     )
-    cmap_pts = cmap_ndvi
 
     def style_ax(ax, title):
         ax.set_title(title, color='white', fontsize=11, fontweight='bold', pad=10)
         ax.set_facecolor('#09150C')
         ax.axis('off')
 
-    # ── 1. NDVI ──
-    im1 = axes[0].imshow(ndvi, cmap=cmap_ndvi, vmin=-0.1, vmax=0.85)
-    style_ax(axes[0], "NDVI — Cobertura Vegetal")
-    cb1 = plt.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)
-    cb1.set_label('NDVI', color='white', fontsize=8)
-    plt.setp(cb1.ax.yaxis.get_ticklabels(), color='white', fontsize=7)
+    nome_fazenda = fazenda_info.get("nome", "Fazenda Piloto")
+    cpa_id = fazenda_info.get("cpa_id", "—")
 
-    # Adiciona legenda de zonas
-    for ndvi_val, label, color in [
-        (0.70, "Reserva/Floresta", "#27AE60"),
-        (0.50, "Lavoura", "#A8D060"),
-        (0.30, "Veg. Moderada", "#F0F0A0"),
-        (0.10, "Solo Exposto", "#D4A017"),
-    ]:
-        axes[0].annotate(
-            f"━ {label}",
-            xy=(0.02, 0.02 + ndvi_val * 0.8),
-            xycoords='axes fraction',
-            color=color, fontsize=6.5, alpha=0.85,
+    if ndvi_seco is not None:
+        # ══════════════════════════════════════════════════════════════
+        # 4 PAINÉIS — classificação temporal
+        # ══════════════════════════════════════════════════════════════
+        fig, axes = plt.subplots(1, 4, figsize=(28, 7))
+        fig.patch.set_facecolor('#09150C')
+
+        # ── 1. NDVI úmido ──
+        im1 = axes[0].imshow(ndvi, cmap=cmap_ndvi, vmin=-0.1, vmax=0.85)
+        style_ax(axes[0], "NDVI — Período Úmido\n(jan-mar)")
+        cb1 = plt.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)
+        cb1.set_label('NDVI', color='white', fontsize=8)
+        plt.setp(cb1.ax.yaxis.get_ticklabels(), color='white', fontsize=7)
+
+        # ── 2. NDVI seco ──
+        im2 = axes[1].imshow(ndvi_seco, cmap=cmap_ndvi, vmin=-0.1, vmax=0.85)
+        style_ax(axes[1], "NDVI — Período Seco\n(jun-ago)")
+        cb2 = plt.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
+        cb2.set_label('NDVI', color='white', fontsize=8)
+        plt.setp(cb2.ax.yaxis.get_ticklabels(), color='white', fontsize=7)
+
+        # ── 3. ΔNDVI — mapa de zonas ──
+        delta = ndvi - ndvi_seco
+        t_lav = DELTA_NDVI_THRESHOLDS["lavoura"]
+        t_zc  = DELTA_NDVI_THRESHOLDS["zona_cinza"]
+        t_ca  = DELTA_NDVI_THRESHOLDS["cerrado_aberto"]
+
+        # Cria mapa categórico de zonas
+        zonas_map = np.full_like(delta, np.nan)
+        valid = ~np.isnan(delta)
+        zonas_map[valid & (delta > t_lav)]                        = 4  # Lavoura
+        zonas_map[valid & (delta > t_zc) & (delta <= t_lav)]      = 3  # Zona cinza
+        zonas_map[valid & (delta > t_ca) & (delta <= t_zc)]       = 2  # Cerrado aberto
+        zonas_map[valid & (delta <= t_ca)]                        = 1  # Reserva densa
+        # Solo exposto (NDVI úmido < 0.20)
+        zonas_map[valid & (ndvi < 0.20) & (ndvi >= 0.0)]         = 5
+        # Água/sombra
+        zonas_map[valid & (ndvi < 0.0)]                           = 0
+
+        cmap_zonas = mcolors.ListedColormap([
+            '#1A3A5C',   # 0 = água/sombra (azul escuro)
+            '#0D5C38',   # 1 = reserva densa (verde escuro)
+            '#27AE60',   # 2 = cerrado aberto (verde claro)
+            '#F0C040',   # 3 = zona cinza (amarelo)
+            '#D85A30',   # 4 = lavoura anual (laranja)
+            '#8B4513',   # 5 = solo exposto (marrom)
+        ])
+        bounds = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5]
+        norm = mcolors.BoundaryNorm(bounds, cmap_zonas.N)
+
+        axes[2].imshow(zonas_map, cmap=cmap_zonas, norm=norm, interpolation='nearest')
+        style_ax(axes[2], "Classificação Temporal\n(ΔNDVI úmido − seco)")
+
+        # Legenda de zonas
+        zona_labels = [
+            ("Reserva densa", "#0D5C38"),
+            ("Cerrado aberto", "#27AE60"),
+            ("Zona cinza → agrícola", "#F0C040"),
+            ("Lavoura anual", "#D85A30"),
+            ("Solo exposto", "#8B4513"),
+        ]
+        for i, (label, color) in enumerate(zona_labels):
+            axes[2].annotate(
+                f"■ {label}",
+                xy=(0.02, 0.92 - i * 0.10),
+                xycoords='axes fraction',
+                color=color, fontsize=7, alpha=0.95,
+                fontweight='bold',
+            )
+
+        # ── 4. Pontos de amostragem ──
+        axes[3].imshow(ndvi, cmap=cmap_ndvi, vmin=-0.1, vmax=0.85, alpha=0.6)
+        style_ax(axes[3], f"Pontos de Amostragem NIR\n{len(pontos)} pontos")
+        _plot_pontos(axes[3], pontos)
+
+        fig.suptitle(
+            f"CarbonChain — MRV Satélite · {nome_fazenda}\n"
+            f"CPA ID: {cpa_id} · VM0042 v2.2 · Sentinel-2 · Classificação Temporal",
+            color='#E6A020', fontsize=13, fontweight='bold', y=1.02
         )
 
-    # ── 2. SOC Proxy ──
-    im2 = axes[1].imshow(soc_proxy, cmap=cmap_soc, vmin=0, vmax=1)
-    style_ax(axes[1], "SOC Proxy — Matéria Orgânica\n(NDWI + NDVI · índice relativo)")
-    cb2 = plt.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
-    cb2.set_label('SOC proxy (0–1)', color='white', fontsize=8)
-    plt.setp(cb2.ax.yaxis.get_ticklabels(), color='white', fontsize=7)
+    else:
+        # ══════════════════════════════════════════════════════════════
+        # 3 PAINÉIS — fallback estático
+        # ══════════════════════════════════════════════════════════════
+        fig, axes = plt.subplots(1, 3, figsize=(21, 7))
+        fig.patch.set_facecolor('#09150C')
 
-    # ── 3. Pontos de amostragem ──
-    axes[2].imshow(ndvi, cmap=cmap_pts, vmin=-0.1, vmax=0.85, alpha=0.6)
-    style_ax(axes[2], f"Pontos de Amostragem NIR\n{len(pontos)} pontos — rota de campo otimizada")
+        # ── 1. NDVI ──
+        im1 = axes[0].imshow(ndvi, cmap=cmap_ndvi, vmin=-0.1, vmax=0.85)
+        style_ax(axes[0], "NDVI — Cobertura Vegetal")
+        cb1 = plt.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04)
+        cb1.set_label('NDVI', color='white', fontsize=8)
+        plt.setp(cb1.ax.yaxis.get_ticklabels(), color='white', fontsize=7)
 
-    cores_prio = {"alta": "#E74C3C", "media": "#F39C12", "baixa": "#3498DB", "grade": "#2ECC71"}
-    tamanhos   = {"alta": 28, "media": 20, "baixa": 14, "grade": 12}
+        for ndvi_val, label, color in [
+            (0.70, "Reserva/Floresta", "#27AE60"),
+            (0.50, "Lavoura", "#A8D060"),
+            (0.30, "Veg. Moderada", "#F0F0A0"),
+            (0.10, "Solo Exposto", "#D4A017"),
+        ]:
+            axes[0].annotate(
+                f"━ {label}",
+                xy=(0.02, 0.02 + ndvi_val * 0.8),
+                xycoords='axes fraction',
+                color=color, fontsize=6.5, alpha=0.85,
+            )
 
+        # ── 2. SOC Proxy ──
+        im2 = axes[1].imshow(soc_proxy, cmap=cmap_soc, vmin=0, vmax=1)
+        style_ax(axes[1], "SOC Proxy — Matéria Orgânica\n(NDWI + NDVI · índice relativo)")
+        cb2 = plt.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
+        cb2.set_label('SOC proxy (0–1)', color='white', fontsize=8)
+        plt.setp(cb2.ax.yaxis.get_ticklabels(), color='white', fontsize=7)
+
+        # ── 3. Pontos ──
+        axes[2].imshow(ndvi, cmap=cmap_ndvi, vmin=-0.1, vmax=0.85, alpha=0.6)
+        style_ax(axes[2], f"Pontos de Amostragem NIR\n{len(pontos)} pontos — rota de campo otimizada")
+        _plot_pontos(axes[2], pontos)
+
+        fig.suptitle(
+            f"CarbonChain — MRV Satélite · {nome_fazenda}\n"
+            f"CPA ID: {cpa_id} · VM0042 v2.2 · Sentinel-2 · Classificação Estática",
+            color='#E6A020', fontsize=13, fontweight='bold', y=1.02
+        )
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches='tight',
+                facecolor='#09150C', edgecolor='none')
+    plt.close()
+    print(f"  ✓ Mapa salvo: {output_path}")
+    return output_path
+
+
+def _plot_pontos(ax, pontos: list[dict]):
+    """Helper: plota pontos de amostragem NIR num eixo matplotlib."""
     for prio, cor, tam in [
         ("grade",  "#2ECC71", 12),
         ("baixa",  "#3498DB", 14),
@@ -412,30 +518,14 @@ def gerar_mapa(
         if pts_prio:
             xs = [p["col"] for p in pts_prio]
             ys = [p["row"] for p in pts_prio]
-            axes[2].scatter(xs, ys, c=cor, s=tam, edgecolors='white',
-                           linewidths=0.3, alpha=0.9, label=prio, zorder=3)
-
-    axes[2].legend(
+            ax.scatter(xs, ys, c=cor, s=tam, edgecolors='white',
+                       linewidths=0.3, alpha=0.9, label=prio, zorder=3)
+    ax.legend(
         title="Prioridade NIR", title_fontsize=7,
         fontsize=6.5, framealpha=0.3,
         facecolor='#09150C', labelcolor='white',
         loc='lower right',
     )
-
-    nome_fazenda = fazenda_info.get("nome", "Fazenda Piloto")
-    cpa_id = fazenda_info.get("cpa_id", "—")
-    fig.suptitle(
-        f"CarbonChain — MRV Satélite · {nome_fazenda}\n"
-        f"CPA ID: {cpa_id} · VM0042 v2.2 · Sentinel-2",
-        color='#E6A020', fontsize=13, fontweight='bold', y=1.02
-    )
-
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches='tight',
-                facecolor='#09150C', edgecolor='none')
-    plt.close()
-    print(f"  ✓ Mapa salvo: {output_path}")
-    return output_path
 
 
 
@@ -515,6 +605,9 @@ def analisar_fazenda(
         fora = ~mascara
         for arr in [b4, b8, b11, b12]:
             arr[fora] = np.nan
+        # Aplica mesma máscara ao ndvi_seco para consistência temporal
+        if ndvi_seco is not None and ndvi_seco.shape == b4.shape:
+            ndvi_seco[fora] = np.nan
     else:
         area_mapeada_ha = fazenda_info.get("area_ha", 0)
 
@@ -572,6 +665,16 @@ def analisar_fazenda(
             pct = (ha / total_mapeado * 100) if total_mapeado > 0 else 0
             print(f"   {zona.replace('_ha','').replace('_',' '):28s}: {ha:6.0f} ha  ({pct:.0f}%)")
 
+    # ── Normalização proporcional para área declarada no CAR ──
+    # O bbox do Sentinel-2 pode incluir pixels de borda parcialmente fora do polígono,
+    # gerando soma de zonas ligeiramente diferente da área declarada no CAR.
+    # Ajuste proporcional mantém as proporções e garante consistência com o registro.
+    total_mapeado = sum(zonas.values())
+    if total_mapeado > 0 and abs(total_mapeado - area_ha) > 1.0:
+        fator = area_ha / total_mapeado
+        zonas = {k: round(v * fator, 1) for k, v in zonas.items()}
+        print(f"\n   📐 Normalização: {total_mapeado:.0f} ha mapeados → {area_ha:.0f} ha CAR (fator {fator:.3f})")
+
     # ── Elegibilidade VM0042 ──
     # Solo agrícola = lavoura + zona cinza + vegetação moderada + solo exposto
     # Zona cinza tratada como agrícola por conservadorismo (não infla REDD+)
@@ -600,7 +703,7 @@ def analisar_fazenda(
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     cpa_id  = fazenda_info.get("cpa_id", "CPA-XX-000").replace(" ", "_")
     mapa_fn = DATA_DIR / f"mapa_ndvi_{cpa_id}.png"
-    gerar_mapa(ndvi, ndwi, soc_prox, pontos, fazenda_info, mapa_fn)
+    gerar_mapa(ndvi, ndwi, soc_prox, pontos, fazenda_info, mapa_fn, ndvi_seco=ndvi_seco)
 
     # ── Montar resultado JSON ──
     resultado = {
@@ -832,6 +935,49 @@ def buscar_sentinel2_api(
     return b4, b8, b11, b12, cloud, fazenda, data_inicio[:10]
 
 
+def buscar_sentinel2_bitemporal(
+    fazenda_key: str = None,
+    fazenda_override: dict = None,
+) -> tuple:
+    """
+    Busca dados Sentinel-2 de DOIS períodos para classificação temporal:
+      1. Período recente (últimos 30 dias) → bandas para NDVI/SOC/BSI
+      2. Período seco (jun-ago) → NDVI seco para ΔNDVI
+
+    Retorna: (b4, b8, b11, b12, cloud, ndvi_seco, fazenda, data_img)
+
+    Se a busca do período seco falhar, ndvi_seco volta como None
+    e o pipeline usa classificação estática como fallback.
+    """
+    # 1. Busca período recente (dados primários)
+    print("\n   📅 [1/2] Buscando período recente...")
+    b4, b8, b11, b12, cloud, fazenda, data_img = buscar_sentinel2_api(
+        fazenda_key=fazenda_key,
+        fazenda_override=fazenda_override,
+        periodo="recente",
+    )
+
+    # 2. Busca período seco (para ΔNDVI)
+    ndvi_seco = None
+    try:
+        print("   📅 [2/2] Buscando período seco (jun-ago) para classificação temporal...")
+        b4s, b8s, _, _, cloud_s, _, _ = buscar_sentinel2_api(
+            fazenda_key=fazenda_key,
+            fazenda_override=fazenda_override,
+            periodo="seco",
+        )
+        ndvi_seco = calcular_ndvi(b4s, b8s)
+        if cloud_s is not None:
+            ndvi_seco[cloud_s > 0.5] = np.nan
+        cloud_pct_seco = float(np.mean(cloud_s) * 100) if cloud_s is not None else 0
+        print(f"   ✓ Período seco obtido (nuvens: {cloud_pct_seco:.0f}%) — classificação temporal ativada")
+    except Exception as e:
+        print(f"   ⚠️  Período seco indisponível: {e}")
+        print("   → Classificação estática será usada como fallback")
+
+    return b4, b8, b11, b12, cloud, ndvi_seco, fazenda, data_img
+
+
 # ── ENTRY POINT ───────────────────────────────────────────────────────────────
 
 def main():
@@ -886,30 +1032,12 @@ def main():
 
     if args.api:
         try:
-            b4, b8, b11, b12, cloud, fazenda, data_img = buscar_sentinel2_api(
+            b4, b8, b11, b12, cloud, ndvi_seco, fazenda, data_img = buscar_sentinel2_bitemporal(
                 fazenda_key=args.farm,
-                data_inicio=args.start,
-                data_fim=args.end,
             )
-            # Tenta buscar dados do período seco para classificação temporal
-            ndvi_seco_api = None
-            try:
-                print("\n   📅 Buscando dados do período seco para classificação temporal...")
-                b4s, b8s, _, _, cloud_s, _, _ = buscar_sentinel2_api(
-                    fazenda_key=args.farm,
-                    periodo="seco",
-                )
-                ndvi_seco_api = calcular_ndvi(b4s, b8s)
-                if cloud_s is not None:
-                    ndvi_seco_api[cloud_s > 0.5] = np.nan
-                print("   ✓ Dados secos obtidos — classificação temporal ativada")
-            except Exception as e:
-                print(f"   ⚠️  Não foi possível obter dados secos: {e}")
-                print("   → Usando classificação estática como fallback")
-
             analisar_fazenda(b4, b8, b11, b12, fazenda,
                              cloud_mask=cloud, data_imagem=data_img,
-                             ndvi_seco=ndvi_seco_api)
+                             ndvi_seco=ndvi_seco)
         except (ValueError, ImportError) as e:
             print(f"\n❌ {e}")
             print("   Rodando em modo local como fallback...\n")

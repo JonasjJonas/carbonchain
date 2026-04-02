@@ -30,7 +30,14 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from mrv.satellite import analisar_fazenda, rodar_teste_local, buscar_sentinel2_api, FAZENDAS
+from mrv.satellite import (
+    analisar_fazenda,
+    rodar_teste_local,
+    buscar_sentinel2_api,
+    buscar_sentinel2_bitemporal,
+    calcular_ndvi,
+    FAZENDAS,
+)
 
 # Importa funções do prospectar.py
 sys.path.insert(0, str(ROOT / "prospeccao"))
@@ -170,7 +177,7 @@ def rodar_pipeline(
     usar_api: bool = False,
     output_dir: Path = None,
     csv_cache: Path = None,   # se fornecido, pula etapas 1-4 e usa CSV existente
-    periodo: str = "recente", # "recente" | "seco" (junho-agosto, ideal para Cerrado)
+    periodo: str = "recente", # DEPRECATED — bitemporal sempre busca úmido + seco
 ):
     estado = estado.upper()
     output_dir = output_dir or ROOT / "data" / "prospeccao"
@@ -251,20 +258,22 @@ def rodar_pipeline(
             sat_module.DATA_DIR = farm_dir
 
             if usar_api:
-                b4, b8, b11, b12, cloud, _, data_img = buscar_sentinel2_api(
-                    fazenda_key=None, data_inicio=None, data_fim=None,
-                    fazenda_override=fazenda_info, periodo=periodo,
+                b4, b8, b11, b12, cloud, ndvi_seco, _, data_img = buscar_sentinel2_bitemporal(
+                    fazenda_override=fazenda_info,
                 )
                 geom = geo.get("geojson")
                 resultado = analisar_fazenda(
                     b4, b8, b11, b12, fazenda_info,
                     cloud_mask=cloud, data_imagem=data_img,
-                    geometria=geom
+                    geometria=geom, ndvi_seco=ndvi_seco,
                 )
             else:
-                b4, b8, b11, b12, _ = rodar_teste_local_com_info(fazenda_info)
+                b4, b8, b11, b12, ndvi_seco, _ = rodar_teste_local_com_info(fazenda_info)
                 geom = geo.get("geojson")
-                resultado = analisar_fazenda(b4, b8, b11, b12, fazenda_info, geometria=geom)
+                resultado = analisar_fazenda(
+                    b4, b8, b11, b12, fazenda_info,
+                    geometria=geom, ndvi_seco=ndvi_seco,
+                )
 
             # O satellite.py já salva o JSON com nome resultado_sat_{cpa_id}.json
             # Apenas referencia o path correto para o resumo
@@ -279,6 +288,7 @@ def rodar_pipeline(
                 "pct_agro":   float(row.get("pct_agro", 0)),
                 "ndvi_medio": resultado["indices"]["ndvi_medio"],
                 "soc_proxy":  resultado["indices"]["soc_proxy"],
+                "metodo_zonas": resultado["indices"].get("metodo_zonas", "estatico_ndvi"),
                 "solo_ha":    resultado["elegibilidade"]["solo_agricola_ha"],
                 "reserva_ha": resultado["elegibilidade"]["reserva_ha"],
                 "n_pontos_nir": resultado["amostragem"]["n_pontos"],
@@ -338,15 +348,15 @@ def rodar_teste_local_com_info(fazenda_info: dict):
     """
     Wrapper sobre rodar_teste_local do satellite.py.
     Usa o area_ha real da fazenda, mantém dados sintéticos.
-    Permite testar o pipeline completo sem credenciais Copernicus.
+    Retorna: (b4, b8, b11, b12, ndvi_seco, fazenda)
     """
     from mrv.satellite import rodar_teste_local
 
     # Cria uma entrada temporária no dict FAZENDAS com o bbox real
     FAZENDAS["_pipeline_tmp"] = fazenda_info
-    b4, b8, b11, b12, fazenda = rodar_teste_local("_pipeline_tmp")
+    b4, b8, b11, b12, ndvi_seco, fazenda = rodar_teste_local("_pipeline_tmp")
     del FAZENDAS["_pipeline_tmp"]
-    return b4, b8, b11, b12, fazenda
+    return b4, b8, b11, b12, ndvi_seco, fazenda
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────
@@ -369,7 +379,7 @@ Exemplos:
     parser.add_argument("--top",       default=10,  type=int,   help="Quantas fazendas PRIORIDADE_1 analisar (default: 10)")
     parser.add_argument("--api",       action="store_true",     help="Usar API Copernicus real (requer .env)")
     parser.add_argument("--csv",       default=None,            help="CSV de prospecção já gerado — pula SICAR + MapBiomas")
-    parser.add_argument("--periodo",   default="recente",       choices=["recente", "seco"], help="Período das imagens: recente (últimos 30 dias) ou seco (jun-ago, melhor para Cerrado)")
+    parser.add_argument("--periodo",   default="recente",       choices=["recente", "seco"], help="(Deprecated) O pipeline agora busca ambos os períodos automaticamente para classificação temporal")
     parser.add_argument("--output",    default=None,            help="Pasta de output (default: data/prospeccao/)")
     args = parser.parse_args()
 

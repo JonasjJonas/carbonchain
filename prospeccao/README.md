@@ -11,6 +11,53 @@ Pipeline completo de entrada de fazendas no CarbonChain: da identificação de c
 | `prospectar.py` | Busca fazendas por município no SICAR, cruza com MapBiomas e gera ranking de candidatos VM0047 |
 | `pipeline.py` | Integra prospectar.py com mrv/satellite.py — roda prospecção e análise satélite em sequência |
 
+---
+
+## Uso rápido
+
+### Só prospecção (ranking de fazendas, sem satélite)
+
+```bash
+cd prospeccao
+
+python3 prospectar.py --municipio "Itumbiara" --estado GO
+python3 prospectar.py --municipio "Rio Verde" --estado GO --area-min 500
+python3 prospectar.py --municipio "Sorriso" --estado MT --area-min 1000
+```
+
+Gera um CSV rankeado com todas as fazendas do município.
+
+### Pipeline completo (prospecção + satélite + mapa)
+
+```bash
+cd prospeccao
+
+# Primeira rodada — roda SICAR + MapBiomas + Sentinel-2
+python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api
+
+# Rodadas seguintes — usa cache CSV (pula SICAR + MapBiomas)
+python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api \
+  --csv ../data/prospeccao/itumbiara_go_vm0047.csv
+```
+
+O pipeline busca automaticamente duas imagens Sentinel-2 (úmido + seco) para cada fazenda e faz a classificação temporal de zonas.
+
+### Depois: calcular créditos
+
+```bash
+cd ~/carbonchain
+
+# Uma fazenda
+python mrv/mrv_calculator.py --farm CPA-GO-001
+
+# Todas
+python mrv/mrv_calculator.py --all
+```
+
+Ver `mrv/README.md` para mais opções.
+
+---
+
 ## Fluxo completo
 
 ```
@@ -23,12 +70,13 @@ API MapBiomas      →   Consulta uso do solo 2022-2024
 Ranking            →   Classifica por % agrícola (VM0047)
                    →   Seleciona top N (PRIORIDADE_1)
                    →   Busca geometrias (polígono) no SICAR
-                   →   Aplica máscara do polígono real
                    ↓
               mrv/satellite.py
-                   →   Analisa cada fazenda (NDVI, SOC, BSI)
-                   →   Gera mapa visual PNG
-                   →   Gera JSON com pontos de amostragem NIR
+                   →   Busca 2 imagens Sentinel-2 (úmido + seco)
+                   →   Aplica máscara do polígono real
+                   →   Classifica zonas por ΔNDVI temporal
+                   →   Normaliza áreas para o CAR
+                   →   Gera mapa 4 painéis PNG + JSON
                    →   Salva em data/prospeccao/{CPA_ID}/
 ```
 
@@ -42,7 +90,7 @@ source venv/bin/activate
 pip install requests pandas tqdm numpy matplotlib scipy python-dotenv sentinelhub
 ```
 
-### Credenciais Copernicus (para dados reais de satélite)
+### Credenciais Copernicus (obrigatório para `--api`)
 
 1. Crie conta gratuita em [dataspace.copernicus.eu](https://dataspace.copernicus.eu)
 2. Vá em **User Settings → OAuth Clients → Create** (Never expire)
@@ -55,103 +103,45 @@ SH_CLIENT_SECRET=seu_client_secret
 
 ---
 
-## Uso
-
-### Só prospecção
-```bash
-python3 prospectar.py --municipio "Itumbiara" --estado GO
-python3 prospectar.py --municipio "Rio Verde" --estado GO --area-min 500
-python3 prospectar.py --municipio "Sorriso" --estado MT --area-min 1000
-```
-
-### Pipeline completo (prospecção + satélite)
-```bash
-# Dados sintéticos — sem credenciais Copernicus
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 10
-
-# Dados reais Sentinel-2 — período recente (últimos 30 dias)
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 10 --api
-
-# Dados reais — período seco (junho-agosto, recomendado para Cerrado)
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 10 --api --periodo seco
-
-# Com cache de prospecção já gerado (pula SICAR + MapBiomas)
-python3 pipeline.py --municipio "Itumbiara" --estado GO --top 10 --api --periodo seco \
-  --csv ../data/prospeccao/itumbiara_go_vm0047.csv
-```
-
----
-
 ## Argumentos
+
+### prospectar.py
 
 | Argumento | Descrição | Default |
 |---|---|---|
 | `--municipio` | Nome do município | obrigatório |
 | `--estado` | Sigla do estado (GO, MT, SP...) | obrigatório |
 | `--area-min` | Área mínima em hectares | 200 |
+| `--output` | Nome do CSV de saída | `{municipio}_vm0047.csv` |
+
+### pipeline.py
+
+| Argumento | Descrição | Default |
+|---|---|---|
+| `--municipio` | Nome do município | obrigatório |
+| `--estado` | Sigla do estado | obrigatório |
+| `--area-min` | Área mínima em hectares | 200 |
 | `--top` | Quantas fazendas PRIORIDADE_1 analisar | 10 |
 | `--api` | Usar API Copernicus com dados reais | False |
-| `--periodo` | `recente` (últimos 30 dias) ou `seco` (jun-ago) | recente |
 | `--csv` | CSV já gerado — pula SICAR + MapBiomas | — |
 | `--output` | Pasta de saída | `data/prospeccao/` |
 
 ---
 
-## Por que usar `--periodo seco`
+## Classificação temporal (como funciona)
 
-No Cerrado, o período chuvoso (outubro–março) é problemático para classificação de uso do solo por satélite. Lavoura de soja, cana e milho em estágio vegetativo pleno atinge NDVI 0.70–0.85 — idêntico ao de floresta nativa.
+O pipeline busca automaticamente **duas imagens** Sentinel-2 para cada fazenda: período úmido (jan-mar) e período seco (jun-ago). A diferença de NDVI entre elas revela o uso real do solo:
 
-Com `--periodo seco` o pipeline busca imagens de **junho a agosto**, quando:
-- Lavouras já foram colhidas → NDVI baixo (~0.15–0.25)
-- Floresta nativa mantém NDVI alto (~0.60–0.80)
-- A distinção entre área agrícola e reserva legal é clara
+- Lavoura: NDVI alto na chuva → baixo na seca (colhida) → **ΔNDVI > 0.35**
+- Reserva: NDVI alto na chuva → ainda alto na seca (perene) → **ΔNDVI < 0.10**
 
-> No período chuvoso (outubro–março), lavoura em estágio vegetativo tem NDVI idêntico ao de floresta nativa — o que gera classificações incorretas. Usando imagens do período seco (junho–agosto), quando a lavoura já foi colhida e o NDVI cai para 0.15–0.25, a distinção entre área agrícola e reserva legal fica clara e confiável.
+Isso resolve o problema de lavoura em estágio vegetativo ser confundida com floresta no período chuvoso.
 
 ---
 
 ## Máscara de polígono
 
-O Sentinel-2 retorna um retângulo (bbox) que é sempre maior do que a fazenda. O pipeline aplica o polígono real do CAR como máscara antes de qualquer cálculo — pixels fora da propriedade são descartados (NaN).
-
-Isso garante que:
-- As zonas calculadas correspondem à área real da fazenda
-- Os pontos de amostragem NIR ficam todos dentro do polígono
-- As porcentagens de floresta/lavoura são da propriedade, não da região
-
----
-
-## Densidade de amostragem NIR
-
-Os pontos de coleta com sensor NIR seguem a VM0042 §7.3:
-
-```
-n_pontos = max(30, min(200, area_ha ÷ 8))
-```
-
-Exemplos para fazendas de Itumbiara:
-
-| Fazenda | Área | Pontos NIR |
-|---|---|---|
-| CPA-GO-001 | 817 ha | 102 pontos |
-| CPA-GO-002 | 595 ha | 74 pontos |
-| CPA-GO-003 | 229 ha | 29 pontos |
-
----
-
-## Outputs
-
-```
-data/prospeccao/
-├── itumbiara_go_vm0047.csv              ← cache da prospecção (todas as fazendas)
-├── itumbiara_go_mrv_resumo.json         ← resumo consolidado do MRV
-├── CPA-GO-001/
-│   ├── mapa_ndvi_CPA-GO-001.png        ← mapa NDVI + SOC proxy + pontos NIR
-│   └── resultado_sat_CPA-GO-001.json   ← dados MRV para mrv_calculator.py
-└── ...
-```
-
-> A pasta `data/` não é versionada — cada rodada gera os outputs localmente.
+O Sentinel-2 retorna um retângulo (bbox) maior que a fazenda. O pipeline aplica o polígono real do CAR como máscara — pixels fora da propriedade são descartados. As áreas são normalizadas proporcionalmente para bater com a área declarada no CAR.
 
 ---
 
@@ -164,6 +154,23 @@ data/prospeccao/
 | `VERIFICAR` | 100–130% agrícola | Verificar manualmente |
 | `FORA_ESCOPO` | < 60% agrícola | Descartar |
 | `DESCARTAR` | > 130% agrícola | Erro de cadastro |
+
+---
+
+## Outputs
+
+```
+data/prospeccao/
+├── itumbiara_go_vm0047.csv              ← cache da prospecção (todas as fazendas)
+├── itumbiara_go_mrv_resumo.json         ← resumo consolidado do MRV
+├── CPA-GO-001/
+│   ├── mapa_ndvi_CPA-GO-001.png        ← 4 painéis: NDVI úmido, seco, zonas, pontos
+│   ├── resultado_sat_CPA-GO-001.json   ← dados MRV para mrv_calculator.py
+│   └── resultado_mrv_CPA-GO-001.json   ← VCUs por ativo → CCTFactory.sol
+└── ...
+```
+
+> A pasta `data/` não é versionada — cada rodada gera os outputs localmente.
 
 ---
 
@@ -183,7 +190,4 @@ carbonchain/
 ├── token/
 └── data/                   ← outputs gerados (não versionado)
     └── prospeccao/
-        └── CPA-GO-00X/
-            ├── mapa_ndvi_CPA-GO-00X.png
-            └── resultado_sat_CPA-GO-00X.json
 ```

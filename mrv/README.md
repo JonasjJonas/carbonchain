@@ -8,49 +8,70 @@ Pipeline de Monitoramento, Relatório e Verificação (MRV) por satélite e sens
 
 | Arquivo | O que faz |
 |---|---|
-| `satellite.py` | Análise Sentinel-2 — NDVI, classificação temporal de zonas (ΔNDVI úmido vs. seco), SOC proxy, pontos de amostragem NIR |
+| `satellite.py` | Análise Sentinel-2 — classificação temporal de zonas (ΔNDVI úmido vs. seco), NDVI, SOC proxy, pontos de amostragem NIR |
 | `nir_model.py` | Modelo AgroCares NIR calibrado para o Cerrado — estima SOC a partir de leituras espectrais em campo |
 | `mrv_calculator.py` | Calculadora VM0042/VM0015/VM0047 — lê o JSON do satellite.py e calcula VCUs por ativo |
 
 ---
 
-## Uso
+## Uso rápido (3 passos)
 
-### Pré-requisito: prospecção
+Todos os comandos a partir de `~/carbonchain`:
 
-O `prospeccao/pipeline.py` gera os JSONs de satélite para cada fazenda. Rode-o primeiro (ver `prospeccao/README.md`):
+### Passo 1 — Prospecção + Satélite (pipeline completo)
 
 ```bash
 cd prospeccao
-python3 pipeline.py --municipio "Itumbiara" --estado GO --api 
+python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api
 ```
 
-Ao final, cada fazenda terá um JSON em `data/prospeccao/{CPA_ID}/resultado_sat_{CPA_ID}.json`.
+Isso roda tudo: SICAR → MapBiomas → ranking → Sentinel-2 (úmido + seco) → classificação temporal → JSON + mapa.
 
-### Calcular créditos de carbono
-
-A partir de `~/carbonchain`:
+Se já tiver o CSV de prospecção de uma rodada anterior:
 
 ```bash
-# Uma fazenda (pelo CPA ID — resolve o JSON automaticamente)
+python3 pipeline.py --municipio "Itumbiara" --estado GO --top 5 --api \
+  --csv ../data/prospeccao/itumbiara_go_vm0047.csv
+```
+
+### Passo 2 — Calcular créditos de carbono
+
+```bash
+cd ~/carbonchain
+
+# Uma fazenda (pelo CPA ID)
 python mrv/mrv_calculator.py --farm CPA-GO-001
 
-# Ou pelo caminho completo do JSON
-python mrv/mrv_calculator.py --farm data/prospeccao/CPA-GO-002/resultado_sat_CPA-GO-002.json
-
-# Todas as fazendas de uma vez (busca em data/prospeccao/ e data/sample_farm/)
+# Todas as fazendas de uma vez
 python mrv/mrv_calculator.py --all
 ```
 
-O SOC é derivado automaticamente do `soc_proxy` do JSON. Se tiver dados NIR de campo, pode passar manualmente:
+### Passo 3 — Verificar resultados
+
+```
+data/prospeccao/CPA-GO-001/
+├── mapa_ndvi_CPA-GO-001.png         ← 4 painéis: NDVI úmido, NDVI seco, zonas ΔNDVI, pontos NIR
+├── resultado_sat_CPA-GO-001.json    ← dados satellite.py
+└── resultado_mrv_CPA-GO-001.json    ← VCUs por ativo → CCTFactory.sol (mint)
+```
+
+---
+
+## Opções avançadas
+
+### mrv_calculator.py
 
 ```bash
+# Caminho completo do JSON (em vez de CPA ID)
+python mrv/mrv_calculator.py --farm data/prospeccao/CPA-GO-002/resultado_sat_CPA-GO-002.json
+
+# Override manual de SOC (se tiver dados NIR de campo)
 python mrv/mrv_calculator.py --farm CPA-GO-001 --soc-t0 2.1 --soc-t1 2.12
 ```
 
-### Rodar satellite.py avulso (sem prospecção)
+Sem `--soc-t0`/`--soc-t1`, o SOC é derivado automaticamente do `soc_proxy` do JSON.
 
-Para análise rápida com dados sintéticos:
+### satellite.py avulso (sem prospecção, dados sintéticos)
 
 ```bash
 python mrv/satellite.py --farm itumbiara
@@ -59,16 +80,17 @@ python mrv/satellite.py --all
 
 ---
 
-## Fluxo
+## Fluxo interno
 
 ```
 prospeccao/pipeline.py
   └→ mrv/satellite.py
-       → coleta imagens Sentinel-2 (úmido + seco)
+       → busca 2 imagens Sentinel-2 (úmido + seco) via buscar_sentinel2_bitemporal()
        → aplica máscara do polígono real (SICAR)
        → calcula NDVI, NDWI, SOC proxy, BSI, NBR
        → classifica zonas por ΔNDVI temporal
-       → gera mapa PNG + resultado_sat_{CPA_ID}.json
+       → normaliza áreas para bater com o CAR
+       → gera mapa 4 painéis PNG + resultado_sat_{CPA_ID}.json
 
 mrv/mrv_calculator.py
   → lê resultado_sat_{CPA_ID}.json
@@ -80,9 +102,9 @@ mrv/mrv_calculator.py
 
 ---
 
-## Classificação Temporal de Zonas
+## Classificação temporal de zonas
 
-O `satellite.py` usa ΔNDVI entre período úmido (jan-mar) e seco (jun-ago) para separar lavoura de reserva — resolvendo a ambiguidade de NDVI alto durante a safra.
+O `satellite.py` busca automaticamente duas imagens Sentinel-2 (úmido + seco) e usa o ΔNDVI para separar lavoura de reserva — resolvendo a ambiguidade de NDVI alto durante a safra.
 
 | ΔNDVI | Classificação | Destino MRV |
 |---|---|---|
@@ -93,7 +115,18 @@ O `satellite.py` usa ΔNDVI entre período úmido (jan-mar) e seco (jun-ago) par
 
 A zona cinza é tratada como solo agrícola por conservadorismo — melhor subestimar reserva do que inflar REDD+.
 
-Sem dados do período seco, o script usa classificação estática por NDVI como fallback.
+As áreas são normalizadas proporcionalmente para bater com a área declarada no CAR.
+
+---
+
+## Mapa de saída (4 painéis)
+
+| Painel | O que mostra |
+|---|---|
+| NDVI — Período Úmido | Imagem Sentinel-2 jan-mar (lavoura no pico vegetativo) |
+| NDVI — Período Seco | Imagem Sentinel-2 jun-ago (lavoura colhida, reserva estável) |
+| Classificação Temporal | Mapa categórico de zonas por ΔNDVI |
+| Pontos de Amostragem NIR | Distribuição dos pontos para coleta em campo |
 
 ---
 
@@ -109,17 +142,6 @@ Todos os cálculos aplicam: incerteza 20% + buffer de permanência 15%.
 
 ---
 
-## Outputs
-
-```
-data/prospeccao/{CPA_ID}/
-├── mapa_ndvi_{CPA_ID}.png          ← mapa NDVI + SOC proxy + pontos NIR
-├── resultado_sat_{CPA_ID}.json     ← dados satellite.py → mrv_calculator.py
-└── resultado_mrv_{CPA_ID}.json     ← VCUs por ativo → CCTFactory.sol (mint)
-```
-
----
-
 ## Dependências
 
 ```
@@ -128,11 +150,4 @@ numpy>=1.24.0
 scipy>=1.10.0
 matplotlib>=3.7.0
 python-dotenv>=1.0.0
-```
-
-Instalar com o venv do pipeline:
-```bash
-cd prospeccao
-source venv/bin/activate
-pip install -r ../requirements.txt
 ```
